@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  master-node:
+    image: "babylonlabs-io/babylond"
+    container_name: master-node
+    command: >
+      bash -c "bash /scripts/initialize_master_snapshot.sh /snapshots/euphrates_snap.tar.gz && babylond start --home /babylondhome --log_format 'plain'"
+    volumes:
+      - ./snapshots:/snapshots:ro
+      - ./scripts:/scripts:ro
+      - ./data/master:/babylondhome
+    ports:
+      - "26656:26656"    # Tendermint RPC
+      - "26657:26657"    # Tendermint P2P
+      - "1317:1317"      # REST API
+      - "9090:9090"      # gRPC
+      - "2345:2345"      # Debugging
+    networks:
+      - babylon-net
+
+  follower-node:
+    image: "babylonlabs-io/babylond"
+    container_name: follower-node
+    command: >
+      babylond start --home /babylondhome --log_format 'plain'
+    volumes:
+      - ./data/follower:/babylondhome
+    ports:
+      - "26658:26656"    # Tendermint RPC for follower
+      - "26667:26657"    # Tendermint P2P for follower
+      - "1318:1317"      # REST API for follower
+      - "9091:9090"      # gRPC for follower
+      - "2346:2345"      # Debugging for follower
+    networks:
+      - babylon-net
+    depends_on:
+      - master-node
+
+networks:
+  babylon-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
