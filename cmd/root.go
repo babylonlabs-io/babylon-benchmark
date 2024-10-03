@@ -83,7 +83,7 @@ func initializeSnapshot(path, output string) {
 	log.Println("Master Node Initialized with Snapshot.")
 
 	// Collect the profile
-	collectProfile(output)
+	// collectProfile(output)
 }
 
 // collectProfile handles the collection of the follower profile
