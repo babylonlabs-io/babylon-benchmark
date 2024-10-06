@@ -1,18 +1,15 @@
 #!/bin/bash -eux
 
-SNAPSHOT_PATH=$1
-
-echo "Initializing Master Node with Snapshot at ${SNAPSHOT_PATH}..."
+echo "Initializing Master Node with Snapshot at /snapshots/euphrates_snap.tar.gz..."
 
 # Initialize Babylon on master node
-babylond init test --chain-id euphrates-0.4.0 --home /babylondhome
-
-# Copy snapshot and genesis file into the container
-# Assumes genesis.json is located at ./data/master/genesis.json
-cp /snapshots/euphrates_snap.tar.gz /babylondhome/
-cp /scripts/genesis.json /babylondhome/config/
+babylond init test --chain-id euphrates-0.4.0 --home ~/.babylond
 
 # Extract the snapshot within the container
-tar -xvf /babylondhome/euphrates_snap.tar.gz -C /babylondhome/ --overwrite
+tar -xvf /snapshots/euphrates_snap.tar.gz -C ~/.babylond --overwrite
+
+cp /snapshots/genesis.json ~/.babylond/config/genesis.json
+
+#babylond start --x-crisis-skip-assert-invariants --home ~/.babylond
 
 echo "Master Node Initialized with Snapshot."
