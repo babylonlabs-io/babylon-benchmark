@@ -2,14 +2,12 @@ version: "3.8"
 
 services:
   master-node:
-    image: "babylonlabs-io/babylond"
+    image: "babylonchain/babylond"
     container_name: master-node
-    command: >
-      bash -c "bash /scripts/initialize_master_snapshot.sh /snapshots/euphrates_snap.tar.gz && babylond start --home /babylondhome --log_format 'plain'"
+    command: tail -f /dev/null  # This keeps the container running
     volumes:
-      - ./snapshots:/snapshots:ro
       - ./scripts:/scripts:ro
-      - ./data/master:/babylondhome
+      - ./snapshots:/snapshots:ro
     ports:
       - "26656:26656"    # Tendermint RPC
       - "26657:26657"    # Tendermint P2P
@@ -20,7 +18,7 @@ services:
       - babylon-net
 
   follower-node:
-    image: "babylonlabs-io/babylond"
+    image: "babylonchain/babylond"
     container_name: follower-node
     command: >
       babylond start --home /babylondhome --log_format 'plain'
@@ -43,3 +41,6 @@ networks:
     ipam:
       config:
         - subnet: 192.168.100.0/24
+
+volumes:
+  babylondhome:
