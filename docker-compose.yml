@@ -4,7 +4,11 @@ services:
   master-node:
     image: "babylonchain/babylond"
     container_name: master-node
-    command: tail -f /dev/null  # This keeps the container running
+    command: >
+      bash -c "
+      bash /scripts/initialize_master_snapshot.sh &&
+      babylond --home ~/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee ~/.babylond/babylond.log
+      "
     volumes:
       - ./scripts:/scripts:ro
       - ./snapshots:/snapshots:ro
