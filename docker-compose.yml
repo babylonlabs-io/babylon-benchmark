@@ -4,6 +4,7 @@ services:
   master-node:
     image: "babylonchain/babylond"
     container_name: master-node
+    user: root
     command: >
       bash -c "
       bash /scripts/init_master.sh &&
@@ -29,6 +30,7 @@ services:
   follower-node:
     image: "babylonchain/babylond"
     container_name: follower-node
+    user: root
     command: >
       bash -c "
       echo 'Waiting for master node to be ready...' &&

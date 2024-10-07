@@ -1,6 +1,10 @@
 #!/bin/bash -eux
 
-echo "Initializing Master Node with Snapshot at /snapshots/euphrates_snap.tar.gz..."
+echo "Initializing Master Node..."
+
+# Use sudo to update package lists and install packages
+apt-get update
+apt-get install -y iputils-ping net-tools curl netcat-openbsd dnsutils vim
 
 # Initialize Babylon on master node
 babylond init test --chain-id euphrates-0.4.0 --home ~/.babylond
@@ -13,6 +17,6 @@ cp /snapshots/genesis.json ~/.babylond/config/genesis.json
 # Modify the config to listen on all interfaces
 sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.babylond/config/config.toml
 
-#babylond start --x-crisis-skip-assert-invariants --home ~/.babylond
+sed -i 's/^external_address = ""/external_address = "tcp:\/\/0.0.0.0:26657"/' ~/.babylond/config/config.toml
 
 echo "Master Node Initialized with Snapshot."
