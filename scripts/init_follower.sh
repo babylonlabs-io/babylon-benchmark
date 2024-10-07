@@ -21,4 +21,4 @@ sed -i "s/persistent_peers = \"\"/persistent_peers = \"$MASTER_NODE_ID@master-no
 
 sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.babylond/config/config.toml
 
-echo "Follower Node Initialized with Snapshot."
+echo "Follower Node Initialized."
