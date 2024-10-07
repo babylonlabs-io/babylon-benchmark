@@ -6,12 +6,17 @@ services:
     container_name: master-node
     command: >
       bash -c "
-      bash /scripts/initialize_master_snapshot.sh &&
+      bash /scripts/init_master.sh &&
       babylond --home ~/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee ~/.babylond/babylond.log
       "
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
     volumes:
       - ./scripts:/scripts:ro
       - ./snapshots:/snapshots:ro
+      - ./babylond_data_master:/home/babylon/.babylond
     ports:
       - "26656:26656"    # Tendermint RPC
       - "26657:26657"    # Tendermint P2P
@@ -25,9 +30,20 @@ services:
     image: "babylonchain/babylond"
     container_name: follower-node
     command: >
-      babylond start --home /babylondhome --log_format 'plain'
+      bash -c "
+      echo 'Waiting for master node to be ready...' &&
+      while ! curl -s http://master-node:26657/status > /dev/null; do
+        echo 'Master node not ready yet. Waiting...'
+        sleep 5
+      done &&
+      echo 'Master node is ready. Proceeding with follower initialization...' &&
+      bash /scripts/init_follower.sh &&
+      babylond --home ~/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee ~/.babylond/babylond.log
+      "
     volumes:
-      - ./data/follower:/babylondhome
+      - ./scripts:/scripts:ro
+      - ./snapshots:/snapshots:ro
+      - ./babylond_data_follower:/home/babylon/.babylond
     ports:
       - "26658:26656"    # Tendermint RPC for follower
       - "26667:26657"    # Tendermint P2P for follower
