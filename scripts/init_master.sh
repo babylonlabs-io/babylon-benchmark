@@ -2,21 +2,38 @@
 
 echo "Initializing Master Node..."
 
-# Use sudo to update package lists and install packages
+# Update package lists
 apt-get update
-apt-get install -y iputils-ping net-tools curl netcat-openbsd dnsutils vim
+
+# Install essential network and system monitoring tools
+apt-get install -y \
+    net-tools \
+    iputils-ping \
+    curl \
+    wget \
+    netcat-openbsd \
+    dnsutils \
+    tcpdump \
+    iproute2 \
+    iftop \
+    procps \
+    htop \
+    iotop \
+    sysstat \
+    lsof \
+    jq
 
 # Initialize Babylon on master node
-babylond init test --chain-id euphrates-0.4.0 --home ~/.babylond
+babylond init test --chain-id euphrates-0.4.0 --home /root/.babylond
 
 # Extract the snapshot within the container
-tar -xvf /snapshots/euphrates_snap.tar.gz -C ~/.babylond --overwrite
+tar -xvf /snapshots/euphrates_snap.tar.gz -C /root/.babylond --overwrite
 
-cp /snapshots/genesis.json ~/.babylond/config/genesis.json
+cp /snapshots/genesis.json /root/.babylond/config/genesis.json
 
 # Modify the config to listen on all interfaces
-sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ~/.babylond/config/config.toml
+sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' /root/.babylond/config/config.toml
 
-sed -i 's/^external_address = ""/external_address = "tcp:\/\/0.0.0.0:26657"/' ~/.babylond/config/config.toml
+sed -i 's/^external_address = ""/external_address = "tcp:\/\/0.0.0.0:26656"/' /root/.babylond/config/config.toml
 
 echo "Master Node Initialized with Snapshot."
