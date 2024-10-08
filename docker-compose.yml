@@ -8,7 +8,7 @@ services:
     command: >
       bash -c "
       bash /scripts/init_master.sh &&
-      babylond --home ~/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee ~/.babylond/babylond.log
+      babylond --home /root/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     cap_add:
       - SYS_PTRACE
@@ -17,7 +17,7 @@ services:
     volumes:
       - ./scripts:/scripts:ro
       - ./snapshots:/snapshots:ro
-      - ./babylond_data_master:/home/babylon/.babylond
+      - ./babylond_data_master:/root/.babylond
     ports:
       - "26656:26656"    # Tendermint RPC
       - "26657:26657"    # Tendermint P2P
@@ -40,12 +40,12 @@ services:
       done &&
       echo 'Master node is ready. Proceeding with follower initialization...' &&
       bash /scripts/init_follower.sh &&
-      babylond --home ~/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee ~/.babylond/babylond.log
+      babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     volumes:
       - ./scripts:/scripts:ro
       - ./snapshots:/snapshots:ro
-      - ./babylond_data_follower:/home/babylon/.babylond
+      - ./babylond_data_follower:/root/.babylond
     ports:
       - "26658:26656"    # Tendermint RPC for follower
       - "26667:26657"    # Tendermint P2P for follower
