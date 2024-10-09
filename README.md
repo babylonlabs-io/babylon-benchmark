@@ -29,7 +29,7 @@ Follow these steps to set up and run the benchmark:
    ```
    make start-benchmark-from-snapshot
    ```
-   This will start both the master and follower nodes. The follower node will begin syncing with the master.
+   This will build the docker images and start both the master and follower nodes. The follower node will begin syncing with the master.
 
 5. Run the profiler:
    Once the follower node has synced with the master, you can start profiling:
