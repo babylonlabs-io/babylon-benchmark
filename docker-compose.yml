@@ -15,8 +15,8 @@ services:
     security_opt:
       - seccomp:unconfined
     volumes:
-      - ./scripts:/scripts:ro
-      - ./snapshots:/snapshots:ro
+      - ./scripts:/scripts
+      - ./snapshots:/snapshots
       - ./babylond_data_master:/root/.babylond
     ports:
       - "26656:26656"    # Tendermint RPC
@@ -43,8 +43,8 @@ services:
       babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     volumes:
-      - ./scripts:/scripts:ro
-      - ./snapshots:/snapshots:ro
+      - ./scripts:/scripts
+      - ./snapshots:/snapshots
       - ./babylond_data_follower:/root/.babylond
     ports:
       - "26658:26656"    # Tendermint RPC for follower
