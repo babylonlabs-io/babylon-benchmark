@@ -24,10 +24,10 @@ apt-get install -y \
     jq
 
 # Initialize Babylon on follower node
-babylond init test --chain-id devnet-1 --home /root/.babylond
+babylond init test --chain-id euphrates-0.4.0 --home /root/.babylond
 
 # Copy the genesis file
-cp /snapshots/dev-genesis.json /root/.babylond/config/genesis.json
+cp /snapshots/genesis.json /root/.babylond/config/genesis.json
 # Copy the genesis file from master-node to follower-node
 #docker cp master-node:/root/.babylond/config/genesis.json - | docker cp - follower-node:/root/.babylond/config/genesis.json
 
