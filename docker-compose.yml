@@ -15,7 +15,7 @@ services:
     security_opt:
       - seccomp:unconfined
     volumes:
-      - ./scripts:/scripts
+      - ./scripts/init_master.sh:/scripts/init_master.sh
       - ./snapshots:/snapshots
       - ./babylond_data_master:/root/.babylond
     ports:
@@ -43,7 +43,7 @@ services:
       babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     volumes:
-      - ./scripts:/scripts
+      - ./scripts/init_follower.sh:/scripts/init_follower.sh
       - ./snapshots:/snapshots
       - ./babylond_data_follower:/root/.babylond
     ports:
