@@ -27,7 +27,7 @@ Follow these steps to set up and run the benchmark:
 
 4. Start the benchmark:
    ```
-   ./start-benchmark-from-snapshot
+   make start-benchmark-from-snapshot
    ```
    This will start both the master and follower nodes. The follower node will begin syncing with the master.
 
@@ -37,6 +37,13 @@ Follow these steps to set up and run the benchmark:
    ./scripts/run-profiler.sh
    ```
    After completion, the profile data will be saved at `cpu.pprof` file in current directory.
+
+6. Stop the nodes:
+   When you're done with the benchmark, you can stop the nodes using:
+   ```
+   make stop-benchmark
+   ```
+   This will shut down both the master and follower nodes and clean up the data directories.
 
 ## Directory Structure
 
