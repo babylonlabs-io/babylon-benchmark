@@ -27,6 +27,15 @@ while true; do
     FOLLOWER_HEIGHT=$(get_height follower-node)
     
     echo "Master height: $MASTER_HEIGHT, Follower height: $FOLLOWER_HEIGHT"
+
+    # Check if heights are valid (not empty and greater than 1)
+    if [ -z "$MASTER_HEIGHT" ] || [ -z "$FOLLOWER_HEIGHT" ] || 
+       ! [[ "$MASTER_HEIGHT" =~ ^[0-9]+$ ]] || ! [[ "$FOLLOWER_HEIGHT" =~ ^[0-9]+$ ]] ||
+       [ "$MASTER_HEIGHT" -le 1 ] || [ "$FOLLOWER_HEIGHT" -le 1 ]; then
+        echo "Invalid heights. Retrying in 60 seconds..."
+        sleep 60
+        continue
+    fi
     
     # Check if heights are close (within 5 blocks)
     if [ $((MASTER_HEIGHT - FOLLOWER_HEIGHT)) -le 5 ]; then
