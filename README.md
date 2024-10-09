@@ -36,13 +36,12 @@ Follow these steps to set up and run the benchmark:
    ```
    ./scripts/run-profiler.sh
    ```
-   After completion, the profile data will be saved in `outputs/cpu.pprof`.
+   After completion, the profile data will be saved at `cpu.pprof` file in current directory.
 
 ## Directory Structure
 
 - `snapshots/`: Place your blockchain snapshots here.
 - `scripts/`: Contains initialization and profiling scripts.
-- `outputs/`: Profiling output files are stored here.
 
 ## Notes
 
