@@ -29,7 +29,10 @@ babylond init test --chain-id euphrates-0.4.0 --home /root/.babylond
 # Extract the snapshot within the container
 tar -xvf /snapshots/euphrates_snap.tar.gz -C /root/.babylond --overwrite
 
-cp /snapshots/genesis.json /root/.babylond/config/genesis.json
+# Fetch the genesis file from remote RPC
+curl https://rpc-euphrates.devnet.babylonchain.io/genesis | jq '.result.genesis' > /root/.babylond/config/genesis.json
+
+#cp /snapshots/genesis.json /root/.babylond/config/genesis.json
 
 # Modify the config to listen on all interfaces
 sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' /root/.babylond/config/config.toml
