@@ -52,6 +52,7 @@ services:
       - "1318:1317"      # REST API for follower
       - "9091:9090"      # gRPC for follower
       - "2346:2345"      # Debugging for follower
+      - "6061:6060"      # pprof for follower
     networks:
       - babylon-net
     depends_on:

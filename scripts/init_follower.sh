@@ -57,6 +57,9 @@ sed -i "s/persistent_peers = \"\"/persistent_peers = \"$MASTER_NODE_ID@master-no
 # Increase timeout_commit to 30s in config.toml
 sed -i 's/timeout_commit = "5s"/timeout_commit = "30s"/' /root/.babylond/config/config.toml
 
+# Change pprof_laddr to 0.0.0.0:6060
+sed -i 's/^pprof_laddr = "localhost:6060"/pprof_laddr = "0.0.0.0:6060"/' /root/.babylond/config/config.toml
+
 echo "Follower Node Initialized with updated configuration."
 echo "Master Node ID: $MASTER_NODE_ID"
 echo "persistent_peers set to: $MASTER_NODE_ID@master-node:26656"
