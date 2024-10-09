@@ -4,7 +4,7 @@ services:
   master-node:
     image: "babylonchain/babylond"
     container_name: master-node
-    user: root
+    user: root # run as root as we need to install some packages in init scripts
     command: >
       bash -c "
       bash /scripts/init_master.sh &&
@@ -30,7 +30,7 @@ services:
   follower-node:
     image: "babylonchain/babylond"
     container_name: follower-node
-    user: root
+    user: root # run as root as we need to install some packages in init scripts
     command: >
       bash -c "
       echo 'Waiting for master node to be ready...' &&
