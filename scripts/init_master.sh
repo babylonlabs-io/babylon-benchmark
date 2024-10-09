@@ -24,16 +24,22 @@ apt-get install -y \
     jq
 
 # Initialize Babylon on master node
-babylond init test --chain-id euphrates-0.4.0 --home /root/.babylond
+babylond init test --chain-id devnet-1 --home /root/.babylond
 
 # Extract the snapshot within the container
-tar -xvf /snapshots/euphrates_snap.tar.gz -C /root/.babylond --overwrite
+tar -xvf /snapshots/devnet_0910.tar.gz -C /root/.babylond --overwrite
 
-cp /snapshots/genesis.json /root/.babylond/config/genesis.json
+cp /snapshots/dev-genesis.json /root/.babylond/config/genesis.json
 
 # Modify the config to listen on all interfaces
 sed -i 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' /root/.babylond/config/config.toml
 
 sed -i 's/^external_address = ""/external_address = "tcp:\/\/0.0.0.0:26656"/' /root/.babylond/config/config.toml
+
+# Change the network to signet in app.toml
+sed -i 's/network = "mainnet"/network = "signet"/' /root/.babylond/config/app.toml
+
+# Increase timeout_commit to 30s in config.toml
+sed -i 's/timeout_commit = "5s"/timeout_commit = "30s"/' /root/.babylond/config/config.toml
 
 echo "Master Node Initialized with Snapshot."
