@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Check if CHAIN_ID is set
+if [ -z "$CHAIN_ID" ]; then
+    echo "Error: CHAIN_ID environment variable is not set."
+    echo "Please specify the chain ID by setting the CHAIN_ID environment variable."
+    exit 1
+fi
+
+# Check if RPC_URL is set
+if [ -z "$RPC_URL" ]; then
+    echo "Error: RPC_URL environment variable is not set."
+    echo "Please specify the RPC URL by setting the RPC_URL environment variable."
+    exit 1
+fi
+
 echo "Initializing Follower Node..."
 
 # Update package lists
@@ -23,14 +37,13 @@ apt-get install -y \
     lsof \
     jq
 
-# Initialize Babylon on follower node
-babylond init test --chain-id euphrates-0.4.0 --home /root/.babylond
+# Initialize Babylon on master node
+echo "Initializing Babylon with chain ID: $CHAIN_ID"
+babylond init test --chain-id $CHAIN_ID --home /root/.babylond
 
 # Fetch the genesis file from remote RPC
-curl https://rpc-euphrates.devnet.babylonchain.io/genesis | jq '.result.genesis' > /root/.babylond/config/genesis.json
-
-# Copy the genesis file
-#cp /snapshots/genesis.json /root/.babylond/config/genesis.json
+echo "Fetching genesis file from $RPC_URL"
+curl "$RPC_URL/genesis" | jq '.result.genesis' > /root/.babylond/config/genesis.json
 
 # Set addr_book_strict to false in config.toml
 sed -i 's/addr_book_strict = true/addr_book_strict = false/' /root/.babylond/config/config.toml

@@ -5,6 +5,15 @@ get_height() {
     docker exec $1 babylond status | jq -r '.sync_info.latest_block_height'
 }
 
+# Function to check if a container is running
+container_is_running() {
+    if [ "$(docker inspect -f '{{.State.Running}}' $1 2>/dev/null)" != "true" ]; then
+        echo "Error: Container $1 is not running."
+        return 1
+    fi
+    return 0
+}
+
 # Start profiling
 start_profiling() {
     echo "Starting profiler..."
@@ -17,6 +26,12 @@ stop_profiling() {
     echo "Stopping profiler..."
     kill $PROFILER_PID
 }
+
+# Check if both containers are running
+if ! container_is_running master-node || ! container_is_running follower-node; then
+    echo "Error: One or both required containers (master-node, follower-node) are not running."
+    exit 1
+fi
 
 # Start profiling
 start_profiling

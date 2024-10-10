@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   master-node:
-    image: "babylonchain/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
+    image: "babylonlabs-io/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
     container_name: master-node
     user: root # run as root as we need to install some packages in init scripts
     command: >
@@ -14,6 +14,10 @@ services:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
+    environment:
+      - SNAPSHOT_FILE=devnet_0910.tar.gz
+      - CHAIN_ID=devnet-1 # should be same as in genesis.json
+      - RPC_URL=https://rpc.devnet.babylonchain.io
     volumes:
       - ./scripts/init_master.sh:/scripts/init_master.sh
       - ./snapshots:/snapshots
@@ -28,7 +32,7 @@ services:
       - babylon-net
 
   follower-node:
-    image: "babylonchain/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
+    image: "babylonlabs-io/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
     container_name: follower-node
     user: root # run as root as we need to install some packages in init scripts
     command: >
@@ -42,6 +46,10 @@ services:
       bash /scripts/init_follower.sh &&
       babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
+    environment:
+      - SNAPSHOT_FILE=devnet_0910.tar.gz
+      - CHAIN_ID=devnet-1 # should be same as in genesis.json
+      - RPC_URL=https://rpc.devnet.babylonchain.io
     volumes:
       - ./scripts/init_follower.sh:/scripts/init_follower.sh
       - ./snapshots:/snapshots
