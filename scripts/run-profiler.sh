@@ -46,4 +46,4 @@ while true; do
     sleep 60  # Check every minute
 done
 
-echo "Profiling complete. Results saved in cpu.pprof"
+echo "Profiling complete"

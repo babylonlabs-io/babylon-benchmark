@@ -36,7 +36,7 @@ Follow these steps to set up and run the benchmark:
    ```
    ./scripts/run-profiler.sh
    ```
-   After completion, the profile data will be saved at `cpu.pprof` file in current directory.
+   After completion, the profile data will be saved under `outputs/` folder.
 
 6. Stop the nodes:
    When you're done with the benchmark, you can stop the nodes using:
@@ -49,6 +49,7 @@ Follow these steps to set up and run the benchmark:
 
 - `snapshots/`: Place your blockchain snapshots here.
 - `scripts/`: Contains initialization and profiling scripts.
+- `outputs/`: Contains the profile data.
 
 ## Notes
 
