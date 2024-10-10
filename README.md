@@ -31,16 +31,16 @@ Follow these steps to set up and run the benchmark:
    ```
    make start-benchmark-from-snapshot
    ```
-   This will build the docker images and start both the master and follower nodes. The follower node will begin syncing with the master.
 
-5. Run the profiler:
-   Once the follower node has synced with the master, you can start profiling:
-   ```
-   ./scripts/run-profiler.sh
-   ```
-   After completion, the profile data will be saved under `outputs/` folder.
+   This command will:
+   - Build the Docker images
+   - Start both the master and follower nodes
+   - Begin the syncing process of the follower node with the master
+   - Start the profiler once the follower node has started syncing
 
-6. Stop the nodes:
+   The profiler will run until follower node has synced with the master. After completion, the profile data will be automatically saved in the `outputs/` folder.
+
+5. Stop the nodes:
    When you're done with the benchmark, you can stop the nodes using:
    ```
    make stop-benchmark
