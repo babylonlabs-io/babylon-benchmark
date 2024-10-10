@@ -18,7 +18,7 @@ Follow these steps to set up and run the benchmark:
    ```
 
 3. Prepare the snapshot:
-   - Download the Euphrates devnet snapshot from [this Google Drive link](https://drive.google.com/drive/u/1/folders/1L0zAjrOhrPnamPLegtmlcYwAH9OT0_Hl).
+   - Download the Phase2 devnet snapshot from [this thread](https://babylonlabsworkspace.slack.com/archives/G07DYV8MA1M/p1728476907088119?thread_ts=1728461084.441899&cid=G07DYV8MA1M).
    - Place the downloaded `.tar.gz` file in the `snapshots/` folder of your project.
    - The extraction and booting process will be automatically handled by the program. You only need to ensure the `.tar.gz` file is present in the `snapshots/` directory.
    - Update the snapshot path in `scripts/init_master.sh` if necessary:
