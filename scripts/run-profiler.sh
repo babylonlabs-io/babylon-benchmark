@@ -2,7 +2,12 @@
 
 # Function to get block height
 get_height() {
-    docker exec $1 babylond status | jq -r '.sync_info.latest_block_height'
+    height=$(docker exec $1 babylond status 2>/dev/null | jq -r '.sync_info.latest_block_height' 2>/dev/null)
+    if [[ "$height" =~ ^[0-9]+$ ]]; then
+        echo "$height"
+    else
+        echo "error"
+    fi
 }
 
 # Function to check if a container is running
@@ -42,10 +47,9 @@ while true; do
     FOLLOWER_HEIGHT=$(get_height follower-node)
     
     # Check if heights are valid numbers
-    if ! [[ "$MASTER_HEIGHT" =~ ^[0-9]+$ ]] || ! [[ "$FOLLOWER_HEIGHT" =~ ^[0-9]+$ ]]; then
-        echo "Invalid heights. Master: $MASTER_HEIGHT, Follower: $FOLLOWER_HEIGHT"
-        echo "Retrying in 60 seconds..."
-        sleep 60
+    if [ "$MASTER_HEIGHT" = "error" ] || [ "$FOLLOWER_HEIGHT" = "error" ]; then
+        echo "Error getting heights, retrying in 10 seconds..."
+        sleep 10
         continue
     fi
 

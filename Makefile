@@ -8,6 +8,7 @@ build-benchmark: build-babylond
 
 start-benchmark-from-snapshot: stop-benchmark build-benchmark
 	docker compose -f docker-compose.yml up -d
+	./scripts/run-profiler.sh
 
 stop-benchmark:
 	docker compose -f docker-compose.yml down
