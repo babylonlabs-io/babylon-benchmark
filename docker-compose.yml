@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   master-node:
-    image: "babylonlabs-io/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
+    image: "babylonlabs-io/babylond" 
     container_name: master-node
     user: root # run as root as we need to install some packages in init scripts
     command: >
@@ -32,7 +32,7 @@ services:
       - babylon-net
 
   follower-node:
-    image: "babylonlabs-io/babylond" # replace this with babylonlabs-io/babylond if you are using newer version of babylond
+    image: "babylonlabs-io/babylond"
     container_name: follower-node
     user: root # run as root as we need to install some packages in init scripts
     command: >
