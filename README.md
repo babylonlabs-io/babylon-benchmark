@@ -22,7 +22,7 @@ Follow these steps to set up and run the benchmark:
    ```
    
    Note: By default, the submodules are pointing to version `v0.11.0`, which corresponds to the Phase 2 devnet-1 snapshot. Always ensure that the Babylon version matches the snapshot you're using. You can verify the correct version in the [devnet-k8s repository](https://github.com/babylonlabs-io/devnet-k8s/blob/3cb993b2bac9ed9b88a4e92f09c0e4d1d65cad08/flux/services/phase-2/network/rpcs/helmrelease.yaml#L25). If you're using a different snapshot or version, make sure to checkout the appropriate tag or commit in the Babylon submodule.
-   
+
 3. Prepare the snapshot:
    - Download the Phase 2 devnet snapshot from [this thread](https://babylonlabsworkspace.slack.com/archives/G07DYV8MA1M/p1728476907088119?thread_ts=1728461084.441899&cid=G07DYV8MA1M).
    - Place the downloaded `.tar.gz` file in the `snapshots/` folder of your project.
@@ -41,7 +41,8 @@ Follow these steps to set up and run the benchmark:
    This command will:
    - Build the Docker images
    - Start both the master and follower nodes
-   - Begin the syncing process of the follower node with the master
+   - Bootstrap the master node with the provided snapshot
+   - Start the follower node which will begin syncing with the master
    - Start the profiler once the follower node has started syncing
 
    The profiler will run until follower node has synced with the master. After completion, the profile data will be automatically saved in the `outputs/` folder.
