@@ -45,7 +45,10 @@ Follow these steps to set up and run the benchmark:
    - Start the follower node which will begin syncing with the master
    - Start the profiler once the follower node has started syncing
 
-   The profiler will run until follower node has synced with the master. After completion, the profile data will be automatically saved in the `outputs/` folder.
+   The profiler will run until follower node has synced with the master. After completion, the profile data will be automatically saved in the `outputs/` folder. You can visualize the profile data using the following command:
+    ```
+    go tool pprof -http=:8080 outputs/profile_<timestamp>.pprof
+    ```
 
 5. Stop the nodes:
    When you're done with the benchmark, you can stop the nodes using:
