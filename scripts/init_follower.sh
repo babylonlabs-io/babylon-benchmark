@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Check if CHAIN_ID is set
-if [ -z "$CHAIN_ID" ]; then
-    echo "Error: CHAIN_ID environment variable is not set."
-    echo "Please specify the chain ID by setting the CHAIN_ID environment variable."
-    exit 1
-fi
-
 # Check if RPC_URL is set
 if [ -z "$RPC_URL" ]; then
     echo "Error: RPC_URL environment variable is not set."
@@ -37,13 +30,31 @@ apt-get install -y \
     lsof \
     jq
 
+# Fetch the genesis file from remote RPC and store it temporarily
+echo "Fetching genesis file from $RPC_URL"
+GENESIS_TEMP=$(curl -s "$RPC_URL/genesis" | jq '.result.genesis')
+if [ -z "$GENESIS_TEMP" ]; then
+    echo "Error: Failed to fetch genesis file"
+    exit 1
+fi
+
+# Extract chain_id from the temporary genesis data
+CHAIN_ID=$(echo "$GENESIS_TEMP" | jq -r '.chain_id')
+
+# Verify that CHAIN_ID was successfully extracted
+if [ -z "$CHAIN_ID" ]; then
+    echo "Error: Failed to extract chain_id from genesis file"
+    exit 1
+fi
+
+echo "Extracted chain_id from genesis: $CHAIN_ID"
+
 # Initialize Babylon on master node
 echo "Initializing Babylon with chain ID: $CHAIN_ID"
 babylond init test --chain-id $CHAIN_ID --home /root/.babylond
 
-# Fetch the genesis file from remote RPC
-echo "Fetching genesis file from $RPC_URL"
-curl "$RPC_URL/genesis" | jq '.result.genesis' > /root/.babylond/config/genesis.json
+# Now that /root/.babylond exists, we can save the genesis file
+echo "$GENESIS_TEMP" > /root/.babylond/config/genesis.json
 
 # Set addr_book_strict to false in config.toml
 sed -i 's/addr_book_strict = true/addr_book_strict = false/' /root/.babylond/config/config.toml

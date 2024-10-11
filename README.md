@@ -12,19 +12,25 @@ Follow these steps to set up and run the benchmark:
    cd babylon-benchmark
    ```
 
-2. Initialize and update submodules:
+2. Initialize, update, and checkout the correct version of submodules:
+   ```bash
+   git submodule init
+   git submodule update
+   cd submodules/babylon
+   git checkout v0.11.0
+   cd ../..
    ```
-   git submodule init && git submodule update
-   ```
-
+   
+   Note: By default, the submodules are pointing to version `v0.11.0`, which corresponds to the Phase 2 devnet-1 snapshot. Always ensure that the Babylon version matches the snapshot you're using. You can verify the correct version in the [devnet-k8s repository](https://github.com/babylonlabs-io/devnet-k8s/blob/3cb993b2bac9ed9b88a4e92f09c0e4d1d65cad08/flux/services/phase-2/network/rpcs/helmrelease.yaml#L25). If you're using a different snapshot or version, make sure to checkout the appropriate tag or commit in the Babylon submodule.
+   
 3. Prepare the snapshot:
-   - Download the Phase2 devnet snapshot from [this thread](https://babylonlabsworkspace.slack.com/archives/G07DYV8MA1M/p1728476907088119?thread_ts=1728461084.441899&cid=G07DYV8MA1M).
+   - Download the Phase 2 devnet snapshot from [this thread](https://babylonlabsworkspace.slack.com/archives/G07DYV8MA1M/p1728476907088119?thread_ts=1728461084.441899&cid=G07DYV8MA1M).
    - Place the downloaded `.tar.gz` file in the `snapshots/` folder of your project.
    - The extraction and booting process will be automatically handled by the program. You only need to ensure the `.tar.gz` file is present in the `snapshots/` directory.
-   - Update the snapshot path in `scripts/init_master.sh` if necessary:
-     ```shell
-     # Edit this line in scripts/init_master.sh to match your snapshot filename
-     tar -xvf /snapshots/your_snapshot_name.tar.gz -C /root/.babylond --overwrite
+   - Update the `SNAPSHOT_FILE` environment variable in your `docker-compose.yml` to match your snapshot filename:
+     ```yaml
+     environment:
+       - SNAPSHOT_FILE=your_snapshot_name.tar.gz
      ```
 
 4. Start the benchmark:

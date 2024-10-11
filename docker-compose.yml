@@ -16,7 +16,6 @@ services:
       - seccomp:unconfined
     environment:
       - SNAPSHOT_FILE=devnet_0910.tar.gz
-      - CHAIN_ID=devnet-1 # should be same as in genesis.json
       - RPC_URL=https://rpc.devnet.babylonchain.io
     volumes:
       - ./scripts/init_master.sh:/scripts/init_master.sh
@@ -47,12 +46,9 @@ services:
       babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     environment:
-      - SNAPSHOT_FILE=devnet_0910.tar.gz
-      - CHAIN_ID=devnet-1 # should be same as in genesis.json
       - RPC_URL=https://rpc.devnet.babylonchain.io
     volumes:
       - ./scripts/init_follower.sh:/scripts/init_follower.sh
-      - ./snapshots:/snapshots
       - ./babylond_data_follower:/root/.babylond
     ports:
       - "26658:26656"    # Tendermint RPC for follower
