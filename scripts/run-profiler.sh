@@ -1,5 +1,8 @@
 #!/bin/bash
 
+PROFILE_FILE=""
+PROFILER_PID=""
+
 # Function to get block height
 get_height() {
     height=$(docker exec $1 babylond status 2>/dev/null | jq -r '.sync_info.latest_block_height' 2>/dev/null)
@@ -19,17 +22,34 @@ container_is_running() {
     return 0
 }
 
-# Start profiling
 start_profiling() {
     echo "Starting profiler..."
-    curl -o "outputs/profile_$(date +%Y%m%d_%H%M%S).pprof" http://localhost:6061/debug/pprof/profile &
+    PROFILE_FILE="outputs/profile_$(date +%Y%m%d_%H%M%S).pprof"
+    (
+        while true; do
+            curl -s --max-time 70 "http://localhost:6061/debug/pprof/profile?seconds=60" >> "$PROFILE_FILE"
+            sleep 1
+        done
+    ) &
     PROFILER_PID=$!
+    echo "Profiler started with PID $PROFILER_PID. Profile will be saved to $PROFILE_FILE"
 }
 
-# Stop profiling
 stop_profiling() {
     echo "Stopping profiler..."
-    kill $PROFILER_PID
+    if [ -n "$PROFILER_PID" ]; then
+        kill $PROFILER_PID
+        wait $PROFILER_PID 2>/dev/null
+        echo "Profiler stopped. Profile saved to $PROFILE_FILE"
+    else
+        echo "No profiler PID found. Profiler may not have been started."
+    fi
+    
+    if [ -s "$PROFILE_FILE" ]; then
+        echo "Profile file created successfully at $PROFILE_FILE"
+    else
+        echo "Warning: Profile file is empty or not created at $PROFILE_FILE"
+    fi
 }
 
 # Check if both containers are running
@@ -48,8 +68,8 @@ while true; do
     
     # Check if heights are valid numbers
     if [ "$MASTER_HEIGHT" = "error" ] || [ "$FOLLOWER_HEIGHT" = "error" ]; then
-        echo "Error getting heights, retrying in 10 seconds..."
-        sleep 10
+        echo "Waiting for master and follower to start, retrying in 10 seconds..."
+        sleep 5
         continue
     fi
 
@@ -62,7 +82,7 @@ while true; do
         break
     fi
     
-    sleep 60  # Check every minute
+    sleep 5  # Check every 5 seconds
 done
 
 echo "Profiling complete"
