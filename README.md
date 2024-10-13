@@ -45,7 +45,17 @@ Follow these steps to set up and run the benchmark:
    - Start the follower node which will begin syncing with the master
    - Start the profiler once the follower node has started syncing
 
-   The profiler will run until follower node has synced with the master. After completion, the profile data will be automatically saved in the `outputs/` folder. You can visualize the profile data using the following command:
+   The profiler will by default run for 60 seconds. To modify the profiling duration:
+   1. Open `scripts/run-profiler.sh`
+   2. Locate the `start_profiling` function
+   3. Change the `seconds=60` parameter in the curl command to your desired duration
+
+   For example, to profile for 120 seconds, you would modify the line to:
+   ```
+   curl -o "$PROFILE_FILE" http://localhost:6061/debug/pprof/profile?seconds=120
+   ```
+
+   After completion, the profile data will be automatically saved in the `outputs/` folder. You can visualize the profile data using the following command:
     ```
     go tool pprof -http=:8080 outputs/profile_<timestamp>.pprof
     ```
