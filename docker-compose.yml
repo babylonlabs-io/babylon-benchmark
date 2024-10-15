@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  master-node:
+    image: "babylonlabs-io/babylond" 
+    container_name: master-node
+    user: root # run as root as we need to install some packages in init scripts
+    command: >
+      bash -c "
+      bash /scripts/init_master.sh &&
+      babylond --home /root/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
+      "
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - SNAPSHOT_FILE=devnet_0910.tar.gz
+      - RPC_URL=https://rpc.devnet.babylonchain.io
+    volumes:
+      - ./scripts/init_master.sh:/scripts/init_master.sh
+      - ./snapshots:/snapshots
+      - ./babylond_data_master:/root/.babylond
+    ports:
+      - "26656:26656"    # Tendermint RPC
+      - "26657:26657"    # Tendermint P2P
+      - "1317:1317"      # REST API
+      - "9090:9090"      # gRPC
+      - "2345:2345"      # Debugging
+    networks:
+      - babylon-net
+
+  follower-node:
+    image: "babylonlabs-io/babylond"
+    container_name: follower-node
+    user: root # run as root as we need to install some packages in init scripts
+    command: >
+      bash -c "
+      echo 'Waiting for master node to be ready...' &&
+      while ! curl -s http://master-node:26657/status > /dev/null; do
+        echo 'Master node not ready yet. Waiting...'
+        sleep 5
+      done &&
+      echo 'Master node is ready. Proceeding with follower initialization...' &&
+      bash /scripts/init_follower.sh &&
+      babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
+      "
+    environment:
+      - RPC_URL=https://rpc.devnet.babylonchain.io
+    volumes:
+      - ./scripts/init_follower.sh:/scripts/init_follower.sh
+      - ./babylond_data_follower:/root/.babylond
+    ports:
+      - "26658:26656"    # Tendermint RPC for follower
+      - "26667:26657"    # Tendermint P2P for follower
+      - "1318:1317"      # REST API for follower
+      - "9091:9090"      # gRPC for follower
+      - "2346:2345"      # Debugging for follower
+      - "6061:6060"      # pprof for follower
+    networks:
+      - babylon-net
+    depends_on:
+      - master-node
+
+networks:
+  babylon-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+
+volumes:
+  babylondhome:
