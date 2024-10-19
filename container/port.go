@@ -5,7 +5,6 @@ import (
 	mrand "math/rand/v2"
 	"net"
 	"sync"
-	"testing"
 )
 
 // Track allocated ports, protected by a mutex
@@ -16,7 +15,7 @@ var (
 
 // AllocateUniquePort tries to find an available TCP port on the localhost
 // by testing multiple random ports within a specified range.
-func AllocateUniquePort(t *testing.T) int {
+func AllocateUniquePort() int {
 	randPort := func(base, spread int) int {
 		return base + mrand.IntN(spread)
 	}
@@ -54,8 +53,6 @@ func AllocateUniquePort(t *testing.T) int {
 
 		return port
 	}
-
-	// If no available port was found, fail the test
-	t.Fatalf("failed to find an available port in range %d-%d", basePort, basePort+portRange)
+	
 	return 0
 }

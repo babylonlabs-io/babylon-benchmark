@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/babylon-benchmark/lib"
 	"regexp"
 	"strconv"
-	"testing"
 	"time"
 
 	bbn "github.com/babylonlabs-io/babylon/types"
@@ -15,7 +15,6 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -35,7 +34,7 @@ var (
 var errRegex = regexp.MustCompile(`(E|e)rror`)
 
 // Manager is a wrapper around all Docker instances, and the Docker API.
-// It provides utilities to run and interact with all Docker containers used within e2e testing.
+// It provides utilities to run and interact with all Docker containers
 type Manager struct {
 	cfg       ImageConfig
 	pool      *dockertest.Pool
@@ -44,9 +43,13 @@ type Manager struct {
 
 // NewManager creates a new Manager instance and initializes
 // all Docker specific utilities. Returns an error if initialization fails.
-func NewManager(t *testing.T) (docker *Manager, err error) {
+func NewManager() (docker *Manager, err error) {
+	imgCfg, err := NewImageConfig()
+	if err != nil {
+		return nil, err
+	}
 	docker = &Manager{
-		cfg:       NewImageConfig(t),
+		cfg:       *imgCfg,
 		resources: make(map[string]*dockertest.Resource),
 	}
 	docker.pool, err = dockertest.NewPool("")
@@ -57,17 +60,17 @@ func NewManager(t *testing.T) (docker *Manager, err error) {
 	return docker, nil
 }
 
-func (m *Manager) ExecBitcoindCliCmd(t *testing.T, command []string) (bytes.Buffer, bytes.Buffer, error) {
+func (m *Manager) ExecBitcoindCliCmd(command []string) (bytes.Buffer, bytes.Buffer, error) {
 	// this is currently hardcoded, as it will be the same for all tests
 	cmd := []string{"bitcoin-cli", "-chain=regtest", "-rpcuser=user", "-rpcpassword=pass"}
 	cmd = append(cmd, command...)
-	return m.ExecCmd(t, bitcoindContainerName, cmd)
+	return m.ExecCmd(bitcoindContainerName, cmd)
 }
 
 // ExecCmd executes command by running it on the given container.
 // It word for word `error` in output to discern between error and regular output.
-// It retures stdout and stderr as bytes.Buffer and an error if the command fails.
-func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) (bytes.Buffer, bytes.Buffer, error) {
+// It returns stdout and stderr as bytes.Buffer and an error if the command fails.
+func (m *Manager) ExecCmd(containerName string, command []string) (bytes.Buffer, bytes.Buffer, error) {
 	if _, ok := m.resources[containerName]; !ok {
 		return bytes.Buffer{}, bytes.Buffer{}, fmt.Errorf("no resource %s found", containerName)
 	}
@@ -82,12 +85,10 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	t.Logf("\n\nRunning: \"%s\"", command)
-
 	// We use the `require.Eventually` function because it is only allowed to do one transaction per block without
 	// sequence numbers. For simplicity, we avoid keeping track of the sequence number and just use the `require.Eventually`.
-	require.Eventually(
-		t,
+	var innerErr error
+	err := lib.Eventually(
 		func() bool {
 			exec, err := m.pool.Client.CreateExec(docker.CreateExecOptions{
 				Context:      ctx,
@@ -99,7 +100,7 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 			})
 
 			if err != nil {
-				t.Logf("failed to create exec: %v", err)
+				innerErr = fmt.Errorf("failed to create exec: %v", err)
 				return false
 			}
 
@@ -110,7 +111,8 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 				ErrorStream:  &errBuf,
 			})
 			if err != nil {
-				t.Logf("failed to start exec: %v", err)
+				innerErr = fmt.Errorf("failed to create exec: %v", err)
+
 				return false
 			}
 
@@ -119,11 +121,7 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 			// This only works if CLI outputs "Error" or "error"
 			// to stderr.
 			if errRegex.MatchString(errBufString) {
-				t.Log("\nstderr:")
-				t.Log(errBufString)
-
-				t.Log("\nstdout:")
-				t.Log(outBuf.String())
+				innerErr = fmt.Errorf("failed to create exec: %v", err)
 				return false
 			}
 
@@ -131,20 +129,23 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 		},
 		timeout,
 		500*time.Millisecond,
-		"command failed",
 	)
+
+	if err != nil {
+		return bytes.Buffer{}, bytes.Buffer{}, fmt.Errorf("docker cmd failed %v %v", err, innerErr)
+	}
 
 	return outBuf, errBuf, nil
 }
 
 // RunBitcoindResource starts a bitcoind docker container
 func (m *Manager) RunBitcoindResource(
-	t *testing.T,
+	name string,
 	bitcoindCfgPath string,
 ) (*dockertest.Resource, error) {
 	bitcoindResource, err := m.pool.RunWithOptions(
 		&dockertest.RunOptions{
-			Name:       fmt.Sprintf("%s-%s", bitcoindContainerName, t.Name()),
+			Name:       fmt.Sprintf("%s-%s", bitcoindContainerName, name),
 			Repository: m.cfg.BitcoindRepository,
 			Tag:        m.cfg.BitcoindVersion,
 			User:       "root:root",
@@ -170,7 +171,7 @@ func (m *Manager) RunBitcoindResource(
 		},
 		func(config *docker.HostConfig) {
 			config.PortBindings = map[docker.Port][]docker.PortBinding{
-				"18443/tcp": {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort(t))}}, // only expose what we need
+				"18443/tcp": {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort())}}, // only expose what we need
 			}
 			config.PublishAllPorts = false // because in dockerfile they already expose them
 		},
@@ -185,7 +186,7 @@ func (m *Manager) RunBitcoindResource(
 
 // RunBabylondResource starts a babylond container
 func (m *Manager) RunBabylondResource(
-	t *testing.T,
+	name string,
 	mounthPath string,
 	baseHeaderHex string,
 	slashingPkScript string,
@@ -204,7 +205,7 @@ func (m *Manager) RunBabylondResource(
 
 	resource, err := m.pool.RunWithOptions(
 		&dockertest.RunOptions{
-			Name:       fmt.Sprintf("%s-%s", babylondContainerName, t.Name()),
+			Name:       fmt.Sprintf("%s-%s", babylondContainerName, name),
 			Repository: m.cfg.BabylonRepository,
 			Tag:        m.cfg.BabylonVersion,
 			Labels: map[string]string{
@@ -222,8 +223,8 @@ func (m *Manager) RunBabylondResource(
 		},
 		func(config *docker.HostConfig) {
 			config.PortBindings = map[docker.Port][]docker.PortBinding{
-				"9090/tcp":  {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort(t))}},
-				"26657/tcp": {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort(t))}},
+				"9090/tcp":  {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort())}},
+				"26657/tcp": {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort())}},
 			}
 		},
 		noRestart,

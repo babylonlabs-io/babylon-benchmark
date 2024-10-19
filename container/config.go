@@ -1,10 +1,5 @@
 package container
 
-import (
-	"github.com/stretchr/testify/require"
-	"testing"
-)
-
 // ImageConfig contains all images and their respective tags
 // needed for running e2e tests.
 type ImageConfig struct {
@@ -22,14 +17,16 @@ const (
 )
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
-func NewImageConfig(t *testing.T) ImageConfig {
+func NewImageConfig() (*ImageConfig, error) {
 	babylondVersion, err := GetBabylonVersion()
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
-	return ImageConfig{
+	return &ImageConfig{
 		BitcoindRepository: dockerBitcoindRepository,
 		BitcoindVersion:    dockerBitcoindVersionTag,
 		BabylonRepository:  dockerBabylondRepository,
 		BabylonVersion:     babylondVersion,
-	}
+	}, nil
 }
