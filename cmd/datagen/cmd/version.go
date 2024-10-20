@@ -17,6 +17,10 @@ func CommandVersion() *cobra.Command {
 			version := versioninfo.Version()
 			commit, ts := versioninfo.CommitInfo()
 
+			if version == "" {
+				version = "main"
+			}
+
 			var sb strings.Builder
 			_, _ = sb.WriteString("Version:       " + version)
 			_, _ = sb.WriteString("\n")
