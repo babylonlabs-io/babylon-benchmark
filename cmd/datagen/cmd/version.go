@@ -10,7 +10,7 @@ import (
 func CommandVersion() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "version",
-		Short:   "Print version of this binary.",
+		Short:   "Prints version.",
 		Example: `dgd version`,
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
