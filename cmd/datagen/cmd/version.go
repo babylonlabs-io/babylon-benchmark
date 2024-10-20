@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/babylonlabs-io/babylon-benchmark/lib/versioninfo"
 	"github.com/spf13/cobra"
 	"strings"
 )
@@ -13,18 +14,15 @@ func CommandVersion() *cobra.Command {
 		Example: `dgd version`,
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			// todo(lazar): real version command
-
-			version := "v0.0.1"
-			commit := "todo"
-			timestamp := "todo"
+			version := versioninfo.Version()
+			commit, ts := versioninfo.CommitInfo()
 
 			var sb strings.Builder
-			_, _ = sb.WriteString("Version       " + version)
+			_, _ = sb.WriteString("Version:       " + version)
 			_, _ = sb.WriteString("\n")
-			_, _ = sb.WriteString("Git Commit    " + commit)
+			_, _ = sb.WriteString("Git Commit:    " + commit)
 			_, _ = sb.WriteString("\n")
-			_, _ = sb.WriteString("Git Timestamp " + timestamp)
+			_, _ = sb.WriteString("Git Timestamp: " + ts)
 			_, _ = sb.WriteString("\n")
 
 			cmd.Printf(sb.String())

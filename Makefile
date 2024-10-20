@@ -5,7 +5,11 @@ GO_BIN := ${GOPATH}/bin
 
 build_tags := $(BUILD_TAGS)
 build_args := $(BUILD_ARGS)
-ldflags := $(LDFLAGS)
+
+VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+
+ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/babylon-benchmark/lib/versioninfo.version=$(VERSION)
+
 
 BUILD_TARGETS := build install
 BUILD_FLAGS := --tags "$(build_tags)" --ldflags '$(ldflags)'
