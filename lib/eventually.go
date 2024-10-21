@@ -12,7 +12,7 @@ func Eventually(ctx context.Context, condition func() bool, timeout time.Duratio
 	for now := time.Now(); now.Before(deadline); now = time.Now() {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("context canceled")
+			return ctx.Err()
 		default:
 			if condition() {
 				return nil
