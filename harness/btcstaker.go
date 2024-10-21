@@ -76,7 +76,7 @@ func (s *BTCStaker) Start(ctx context.Context) error {
 
 func (s *BTCStaker) Stop() {
 	close(s.quit)
-	s.wg.Wait()
+	//s.wg.Wait()
 }
 
 // infinite loop to constantly send delegations
@@ -302,6 +302,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 ) *bstypes.InclusionProof {
 
 	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
 
 	for {
 		select {

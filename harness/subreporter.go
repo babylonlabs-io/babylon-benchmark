@@ -43,13 +43,14 @@ func (s *SubReporter) Start(ctx context.Context) {
 
 func (s *SubReporter) Stop() {
 	close(s.quit)
-	s.wg.Wait()
+	//s.wg.Wait()
 }
 
 func (s *SubReporter) runForever(ctx context.Context) {
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -171,6 +172,7 @@ func (s *SubReporter) waitFor2TransactionsConfirmation(
 ) []*btckpttypes.BTCSpvProof {
 
 	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
 
 	for {
 		select {

@@ -71,13 +71,14 @@ func (g *BTCHeaderGenerator) Start(ctx context.Context) {
 
 func (g *BTCHeaderGenerator) Stop() {
 	close(g.quit)
-	g.wg.Wait()
+	//g.wg.Wait()
 }
 
 func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
 	defer g.wg.Done()
 
 	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
 
 	for {
 		select {
@@ -85,9 +86,7 @@ func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
 			fmt.Printf("got cancellation")
 			return
 		case <-t.C:
-			if err := g.genBlocks(ctx); err != nil {
-				panic(err)
-			}
+			_ = g.genBlocks(ctx)
 		}
 	}
 }

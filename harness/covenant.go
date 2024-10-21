@@ -46,13 +46,14 @@ func (c *CovenanEmulator) Start(ctx context.Context) {
 
 func (c *CovenanEmulator) Stop() {
 	close(c.quit)
-	c.wg.Wait()
+	//c.wg.Wait()
 }
 
 func (c *CovenanEmulator) runForever(ctx context.Context) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {

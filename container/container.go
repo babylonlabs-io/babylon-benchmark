@@ -77,15 +77,15 @@ func (m *Manager) ExecCmd(ctx context.Context, containerName string, command []s
 		errBuf bytes.Buffer
 	)
 
-	timeout := 120 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	timeout := 5 * time.Second
+	innerCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// We use the `require.Eventually` function because it is only allowed to do one transaction per block without
 	// sequence numbers. For simplicity, we avoid keeping track of the sequence number and just use the `require.Eventually`.
 	var innerErr error
 	err := lib.Eventually(
-		ctx,
+		innerCtx,
 		func() bool {
 			exec, err := m.pool.Client.CreateExec(docker.CreateExecOptions{
 				Context:      ctx,

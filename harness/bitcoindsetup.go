@@ -57,10 +57,17 @@ func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (
 	//	_ = h.m.ClearResources()
 	//})
 
+	fmt.Println("starting GetBlockCount")
+
 	err = lib.Eventually(ctx, func() bool {
-		_, err = h.GetBlockCount(ctx)
+		fmt.Println("starting 2")
+
+		_, err := h.GetBlockCount(ctx)
+		fmt.Println("starting 3")
+
 		if err != nil {
 			fmt.Printf("failed to get block count: %v", err)
+			return false
 		}
 		return err == nil
 	}, startTimeout, 500*time.Millisecond, "err waiting for block count")
