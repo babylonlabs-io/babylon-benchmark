@@ -357,7 +357,7 @@ func (s *BTCStaker) buildInclusion(
 }
 
 func (s *BTCStaker) buildAndSendStakingTransaction(
-	stakerAddres btcutil.Address,
+	stakerAddress btcutil.Address,
 	stakerPk *btcec.PublicKey,
 	params *btcstypes.Params,
 ) error {
@@ -500,7 +500,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	}
 	unbondingSlashingSig := bbntypes.NewBIP340SignatureFromBTCSig(signUnbondingSlashingRes.Signature)
 
-	pop, err := s.signBip322NativeSegwit(stakerAddres)
+	pop, err := s.signBip322NativeSegwit(stakerAddress)
 	if err != nil {
 		return err
 	}
