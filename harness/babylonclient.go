@@ -2,20 +2,32 @@ package harness
 
 import (
 	"context"
+	sdkmath "cosmossdk.io/math"
 	"encoding/hex"
 	"fmt"
 	bbn "github.com/babylonlabs-io/babylon/app"
 	"github.com/babylonlabs-io/babylon/client/config"
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
 	"github.com/babylonlabs-io/babylon/client/query"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/btcsuite/btcd/wire"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+	"math/rand"
 	"time"
+)
+
+var (
+	r = rand.New(rand.NewSource(time.Now().Unix()))
 )
 
 type Client struct {
@@ -164,4 +176,50 @@ func ToProviderMsgs(msgs []sdk.Msg) []pv.RelayerMessage {
 		relayerMsgs = append(relayerMsgs, cosmos.NewCosmosMessage(m, func(signer string) {}))
 	}
 	return relayerMsgs
+}
+
+func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
+	var headersBytes []bbntypes.BTCHeaderBytes
+
+	for _, h := range headers {
+		headersBytes = append(headersBytes, bbntypes.NewBTCHeaderBytesFromBlockHeader(h))
+	}
+
+	msg := btclctypes.MsgInsertHeaders{
+		Headers: headersBytes,
+		Signer:  s.BabylonAddress.String(),
+	}
+
+	return s.SendMsgs(context.Background(), []sdk.Msg{&msg})
+}
+
+func (s *SenderWithBabylonClient) CreateFinalityProvider() (*pv.RelayerTxResponse, *bstypes.FinalityProvider, error) {
+	var err error
+	signerAddr := s.BabylonAddress.String()
+	addr := sdk.MustAccAddressFromBech32(signerAddr)
+
+	fpSK, _, err := datagen.GenRandomBTCKeyPair(r)
+	if err != nil {
+		return nil, nil, err
+	}
+	btcFp, err := datagen.GenRandomFinalityProviderWithBTCBabylonSKs(r, fpSK, addr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	commission := sdkmath.LegacyZeroDec()
+	msgNewVal := &bstypes.MsgCreateFinalityProvider{
+		Addr:        signerAddr,
+		Description: &stakingtypes.Description{Moniker: datagen.GenRandomHexStr(r, 10)},
+		Commission:  &commission,
+		BtcPk:       btcFp.BtcPk,
+		Pop:         btcFp.Pop,
+	}
+	resp, err := s.SendMsgs(context.Background(), []sdk.Msg{msgNewVal})
+
+	if err != nil {
+		return resp, nil, err
+	}
+
+	return resp, btcFp, nil
 }
