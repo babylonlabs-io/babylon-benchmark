@@ -1,5 +1,7 @@
 package container
 
+import "github.com/babylonlabs-io/babylon-benchmark/lib"
+
 // ImageConfig contains all images and their respective tags
 // needed for running e2e tests.
 type ImageConfig struct {
@@ -18,7 +20,7 @@ const (
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
 func NewImageConfig() (*ImageConfig, error) {
-	babylondVersion, err := GetBabylonVersion()
+	babylondVersion, err := lib.GetBabylonVersion()
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package container
+package lib
 
 import (
 	"fmt"
@@ -9,7 +9,14 @@ import (
 
 // GetBabylonVersion returns babylond version from go.mod
 func GetBabylonVersion() (string, error) {
-	goModPath := filepath.Join("..", "go.mod")
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+
+	}
+
+	fmt.Println("Current working directory:", dir)
+	goModPath := filepath.Join("go.mod")
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
 		return "", err

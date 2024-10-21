@@ -30,11 +30,10 @@ func main() {
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	err := rootCmd.ExecuteContext(ctx)
-	cancel()
+	defer cancel()
 
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "⚠️: There was an error while executing dgd CLI '%s'", err)
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "⚠️: There was an error while executing dgd CLI '%s'\n", err)
 		os.Exit(1)
 	}
 }

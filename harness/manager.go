@@ -220,6 +220,9 @@ func (tm *TestManager) Stop() {
 		err := tm.BabylonClient.Stop()
 		fmt.Printf("err stopping client %v", err)
 	}
+	if err := tm.manger.ClearResources(); err != nil {
+		fmt.Printf("err clearning docker resource %v", err)
+	}
 }
 
 // mineBlock mines a single block

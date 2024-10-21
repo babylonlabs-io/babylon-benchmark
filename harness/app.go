@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
-	"time"
 )
 
 func Run(ctx context.Context) error {
@@ -90,10 +89,8 @@ func startHarness(ctx context.Context) error {
 	covenant.Start()
 	defer covenant.Stop()
 
-	fmt.Printf("sleeping 120s")
-	time.Sleep(120 * time.Second)
-
 	<-ctx.Done()
+	tm.Stop()
 
 	return nil
 }
