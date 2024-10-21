@@ -15,90 +15,51 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"testing"
 	"time"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/txscript"
-	pv "github.com/cosmos/relayer/v2/relayer/provider"
-	"go.uber.org/zap"
-
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
-	"github.com/babylonlabs-io/vigilante/btcclient"
 	"github.com/babylonlabs-io/vigilante/config"
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/stretchr/testify/require"
 )
 
 var (
-	submitterAddrStr = "bbn1eppc73j56382wjn6nnq3quu5eye4pmm087xfdh" //nolint:unused
-	babylonTag       = []byte{1, 2, 3, 4}                           //nolint:unused
-	babylonTagHex    = hex.EncodeToString(babylonTag)               //nolint:unused
-
+	babylonTag            = []byte{1, 2, 3, 4} //nolint:unused
 	eventuallyWaitTimeOut = 40 * time.Second
 	eventuallyPollTime    = 1 * time.Second
 	regtestParams         = &chaincfg.RegressionNetParams
-	defaultEpochInterval  = uint(400) //nolint:unused
 )
 
 const (
 	chainId = "chain-test"
 )
 
-func defaultVigilanteConfig() *config.Config {
-	defaultConfig := config.DefaultConfig()
-	defaultConfig.BTC.NetParams = regtestParams.Name
-	defaultConfig.BTC.Endpoint = "127.0.0.1:18443"
-	// Config setting necessary to connect btcwallet daemon
-	defaultConfig.BTC.WalletPassword = "pass"
-	defaultConfig.BTC.Username = "user"
-	defaultConfig.BTC.Password = "pass"
-	defaultConfig.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
+func defaultConfig() *config.Config {
+	cfg := config.DefaultConfig()
+	cfg.BTC.NetParams = regtestParams.Name
+	cfg.BTC.Endpoint = "127.0.0.1:18443"
+	cfg.BTC.WalletPassword = "pass"
+	cfg.BTC.Username = "user"
+	cfg.BTC.Password = "pass"
+	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
 
-	return defaultConfig
+	return cfg
 }
 
 type TestManager struct {
 	TestRpcClient   *rpcclient.Client
 	BitcoindHandler *BitcoindTestHandler
 	BabylonClient   *bbnclient.Client
-	BTCClient       *btcclient.Client
 	Config          *config.Config
 	WalletPrivKey   *btcec.PrivateKey
 	manger          *container.Manager
 	mu              sync.Mutex
-}
-
-func initBTCClientWithSubscriber(ctx context.Context, cfg *config.Config) *btcclient.Client {
-	client, err := btcclient.NewWallet(cfg, zap.NewNop())
-	if err != nil {
-		panic(err)
-	}
-
-	// let's wait until chain rpc becomes available
-	// poll time is increase here to avoid spamming the rpc server
-	var innerErr error
-	err = lib.Eventually(ctx, func() bool {
-		if _, err := client.GetBlockCount(); err != nil {
-			innerErr = err
-			return false
-		}
-
-		return true
-	}, eventuallyWaitTimeOut, eventuallyPollTime, "err waiting init btc client")
-
-	if err != nil {
-		panic(fmt.Errorf("err %v inner: %v", err, innerErr))
-	}
-
-	return client
 }
 
 // StartManager creates a test manager
@@ -118,7 +79,7 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	passphrase := "pass"
 	_ = btcHandler.CreateWallet(ctx, "default", passphrase)
 
-	cfg := defaultVigilanteConfig()
+	cfg := defaultConfig()
 
 	cfg.BTC.Endpoint = fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
 
@@ -146,8 +107,6 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	}
 	blocksResponse := btcHandler.GenerateBlocks(ctx, int(numMatureOutputsInWallet))
 
-	btcClient := initBTCClientWithSubscriber(ctx, cfg)
-
 	var buff bytes.Buffer
 	err = regtestParams.GenesisBlock.Header.Serialize(&buff)
 	if err != nil {
@@ -166,13 +125,12 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	}
 
 	// start Babylon node
-
 	tmpDir, err := tempDir()
 	if err != nil {
 		return nil, err
 	}
 
-	babylond, err := manager.RunBabylondResource("babylon-master", tmpDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
+	babylond, err := manager.RunBabylondResource("main", tmpDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -194,11 +152,8 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	// wait until Babylon is ready
 	err = lib.Eventually(ctx, func() bool {
 		_, err := babylonClient.CurrentEpoch()
-		if err != nil {
-			return false
-		}
-		//log.Infof("Babylon is ready: %v", resp)
-		return true
+
+		return err == nil
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "err waiting current epoch")
 
 	if err != nil {
@@ -208,7 +163,6 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 		TestRpcClient:   testRpcClient,
 		BabylonClient:   babylonClient,
 		BitcoindHandler: btcHandler,
-		BTCClient:       btcClient,
 		Config:          cfg,
 		WalletPrivKey:   walletPrivKey,
 		manger:          manager,
@@ -223,87 +177,6 @@ func (tm *TestManager) Stop() {
 	if err := tm.manger.ClearResources(); err != nil {
 		fmt.Printf("err clearning docker resource %v", err)
 	}
-}
-
-// mineBlock mines a single block
-func (tm *TestManager) mineBlock(ctx context.Context) *wire.MsgBlock {
-	resp := tm.BitcoindHandler.GenerateBlocks(ctx, 1)
-
-	hash, err := chainhash.NewHashFromStr(resp.Blocks[0])
-	if err != nil {
-		panic(err)
-	}
-
-	header, err := tm.TestRpcClient.GetBlock(hash)
-	if err != nil {
-		panic(err)
-	}
-
-	return header
-}
-
-func (tm *TestManager) MustGetBabylonSigner() string {
-	return tm.BabylonClient.MustGetAddr()
-}
-
-// RetrieveTransactionFromMempool fetches transactions from the mempool for the given hashes
-func (tm *TestManager) RetrieveTransactionFromMempool(t *testing.T, hashes []*chainhash.Hash) []*btcutil.Tx {
-	var txs []*btcutil.Tx
-	for _, txHash := range hashes {
-		tx, err := tm.BTCClient.GetRawTransaction(txHash)
-		require.NoError(t, err)
-		txs = append(txs, tx)
-	}
-
-	return txs
-}
-
-func (tm *TestManager) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
-	var headersBytes []bbn.BTCHeaderBytes
-
-	for _, h := range headers {
-		headersBytes = append(headersBytes, bbn.NewBTCHeaderBytesFromBlockHeader(h))
-	}
-
-	msg := btclctypes.MsgInsertHeaders{
-		Headers: headersBytes,
-		Signer:  tm.MustGetBabylonSigner(),
-	}
-
-	return tm.BabylonClient.InsertHeaders(ctx, &msg)
-}
-
-func (tm *TestManager) CatchUpBTCLightClient(ctx context.Context) error {
-	btcHeight, err := tm.TestRpcClient.GetBlockCount()
-	if err != nil {
-		return err
-	}
-
-	tipResp, err := tm.BabylonClient.BTCHeaderChainTip()
-	if err != nil {
-		return err
-	}
-	btclcHeight := tipResp.Header.Height
-
-	var headers []*wire.BlockHeader
-	for i := int(btclcHeight + 1); i <= int(btcHeight); i++ {
-		hash, err := tm.TestRpcClient.GetBlockHash(int64(i))
-		if err != nil {
-			return err
-		}
-		header, err := tm.TestRpcClient.GetBlockHeader(hash)
-		if err != nil {
-			return err
-		}
-		headers = append(headers, header)
-	}
-
-	_, err = tm.InsertBTCHeadersToBabylon(ctx, headers)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func importPrivateKey(ctx context.Context, btcHandler *BitcoindTestHandler) (*btcec.PrivateKey, error) {

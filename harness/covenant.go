@@ -86,6 +86,9 @@ func (c *CovenanEmulator) sendMsgsWithSig(ctx context.Context) error {
 	}
 
 	messages, err := c.messagesWithSignatures(respo.BtcDelegations, &params.Params)
+	if err != nil {
+		return err
+	}
 
 	resp, err := c.client.SendMsgs(ctx, messages)
 	if err != nil {

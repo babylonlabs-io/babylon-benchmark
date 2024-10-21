@@ -92,7 +92,7 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 			if err != nil {
 				panic(err)
 			}
-			s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
+			_ = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 		}
 	}
 }
@@ -383,6 +383,9 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	}
 
 	stakingTx, hash, err := s.tm.AtomicFundSignSendStakingTx(stakingInfo.StakingOutput)
+	if err != nil {
+		return err
+	}
 	fmt.Printf("send staking tx with hash %s \n", hash)
 
 	// TODO: hardcoded two in tests

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -25,5 +26,5 @@ func Eventually(ctx context.Context, condition func() bool, timeout time.Duratio
 		msg = fmt.Sprintf(msg, msgAndArgs...)
 	}
 
-	return fmt.Errorf(msg)
+	return errors.New(msg)
 }
