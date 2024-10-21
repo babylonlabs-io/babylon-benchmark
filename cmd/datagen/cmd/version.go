@@ -11,6 +11,7 @@ func CommandVersion() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "version",
 		Short:   "Prints version.",
+		Aliases: []string{"g"},
 		Example: `dgd version`,
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {

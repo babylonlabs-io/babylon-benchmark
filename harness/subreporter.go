@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/babylonlabs-io/babylon/btctxformatter"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btckpttypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
@@ -12,8 +15,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"sync"
-	"time"
 )
 
 type SubReporter struct {

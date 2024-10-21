@@ -3,11 +3,15 @@ package harness
 import (
 	"bytes"
 	"context"
+	"cosmossdk.io/errors"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
+	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"os"
 	"path/filepath"
 	"sync"
@@ -396,28 +400,32 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	return rawTxResult.Transaction, txHash, nil
 }
 
-//
-//func (tm *TestManager) fundAllParties(
-//	t *testing.T,
-//	senders []*SenderWithBabylonClient,
-//) {
-//
-//	fundingAccount := tm.BabylonClient.MustGetAddr()
-//	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
-//
-//	var msgs []sdk.Msg
-//
-//	for _, sender := range senders {
-//		msg := banktypes.NewMsgSend(fundingAddress, sender.BabylonAddress, types.NewCoins(types.NewInt64Coin("ubbn", 100000000)))
-//		msgs = append(msgs, msg)
-//	}
-//
-//	resp, err := tm.BabylonClient.ReliablySendMsgs(
-//		context.Background(),
-//		msgs,
-//		[]*errors.Error{},
-//		[]*errors.Error{},
-//	)
-//	require.NoError(t, err)
-//	require.NotNil(t, resp)
-//}
+func (tm *TestManager) fundAllParties(
+	senders []*SenderWithBabylonClient,
+) error {
+
+	fundingAccount := tm.BabylonClient.MustGetAddr()
+	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
+
+	var msgs []sdk.Msg
+
+	for _, sender := range senders {
+		msg := banktypes.NewMsgSend(fundingAddress, sender.BabylonAddress, types.NewCoins(types.NewInt64Coin("ubbn", 100000000)))
+		msgs = append(msgs, msg)
+	}
+
+	resp, err := tm.BabylonClient.ReliablySendMsgs(
+		context.Background(),
+		msgs,
+		[]*errors.Error{},
+		[]*errors.Error{},
+	)
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return fmt.Errorf("resp fund parties empty")
+	}
+
+	return nil
+}

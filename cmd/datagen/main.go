@@ -26,6 +26,7 @@ func main() {
 	rootCmd := NewRootCmd()
 	rootCmd.AddCommand(
 		cmd.CommandVersion(),
+		cmd.CommandGenerate(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

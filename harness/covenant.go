@@ -3,6 +3,9 @@ package harness
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	staking "github.com/babylonlabs-io/babylon/btcstaking"
 	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -12,8 +15,6 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"sync"
-	"time"
 )
 
 type CovenanEmulator struct {

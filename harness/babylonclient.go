@@ -2,9 +2,12 @@ package harness
 
 import (
 	"context"
-	sdkmath "cosmossdk.io/math"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
+	"time"
+
+	sdkmath "cosmossdk.io/math"
 	bbn "github.com/babylonlabs-io/babylon/app"
 	"github.com/babylonlabs-io/babylon/client/config"
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
@@ -22,8 +25,6 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"math/rand"
-	"time"
 )
 
 var (
@@ -222,4 +223,14 @@ func (s *SenderWithBabylonClient) CreateFinalityProvider() (*pv.RelayerTxRespons
 	}
 
 	return resp, btcFp, nil
+}
+
+func senders(stakers []*BTCStaker) []*SenderWithBabylonClient {
+	var sends []*SenderWithBabylonClient
+
+	for _, staker := range stakers {
+		stakerCp := staker
+		sends = append(sends, stakerCp.client)
+	}
+	return sends
 }
