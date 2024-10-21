@@ -4,10 +4,14 @@ go 1.23.2
 
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
+	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.2
+	github.com/cometbft/cometbft => github.com/cometbft/cometbft v0.38.11 // todo(lazar): see who is forcing .12 conflicting version
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+
 )
 
 require (
+	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.3.0
 	github.com/babylonlabs-io/babylon v0.12.0
 	github.com/babylonlabs-io/vigilante v0.12.0
@@ -36,7 +40,6 @@ require (
 	cosmossdk.io/collections v0.4.0 // indirect
 	cosmossdk.io/core v0.11.1 // indirect
 	cosmossdk.io/depinject v1.0.0 // indirect
-	cosmossdk.io/errors v1.0.1 // indirect
 	cosmossdk.io/log v1.4.1 // indirect
 	cosmossdk.io/store v1.1.1 // indirect
 	cosmossdk.io/x/circuit v0.1.1 // indirect

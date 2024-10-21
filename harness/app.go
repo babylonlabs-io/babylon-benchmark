@@ -69,7 +69,7 @@ func startHarness(ctx context.Context) error {
 	defer vig.Stop()
 
 	// start stakers and defer stops
-	// TODO: Ideally stakers would start on different times to reduce contention
+	// TODO(lazar): Ideally stakers would start on different times to reduce contention
 	// on funding BTC wallet
 	for _, staker := range stakers {
 		if err := staker.Start(); err != nil {
