@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -27,7 +28,7 @@ func NewBTCHeaderGenerator(
 	}
 }
 
-func (s *BTCHeaderGenerator) CatchUpBTCLightClient() error {
+func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 	btcHeight, err := s.tm.TestRpcClient.GetBlockCount()
 	if err != nil {
 		return err
@@ -52,7 +53,7 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient() error {
 		headers = append(headers, header)
 	}
 
-	_, err = s.client.InsertBTCHeadersToBabylon(headers)
+	_, err = s.client.InsertBTCHeadersToBabylon(ctx, headers)
 	if err != nil {
 		return err
 	}
@@ -60,12 +61,12 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient() error {
 	return nil
 }
 
-func (g *BTCHeaderGenerator) Start() {
-	if err := g.CatchUpBTCLightClient(); err != nil {
+func (g *BTCHeaderGenerator) Start(ctx context.Context) {
+	if err := g.CatchUpBTCLightClient(ctx); err != nil {
 		panic(err)
 	}
 	g.wg.Add(1)
-	go g.runForever()
+	go g.runForever(ctx)
 }
 
 func (g *BTCHeaderGenerator) Stop() {
@@ -73,25 +74,26 @@ func (g *BTCHeaderGenerator) Stop() {
 	g.wg.Wait()
 }
 
-func (g *BTCHeaderGenerator) runForever() {
+func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
 	defer g.wg.Done()
 
 	t := time.NewTicker(5 * time.Second)
 
 	for {
 		select {
-		case <-g.quit:
+		case <-ctx.Done():
+			fmt.Printf("got cancellation")
 			return
 		case <-t.C:
-			if err := g.genBlocks(); err != nil {
+			if err := g.genBlocks(ctx); err != nil {
 				panic(err)
 			}
 		}
 	}
 }
 
-func (g *BTCHeaderGenerator) genBlocks() error {
-	resp := g.tm.BitcoindHandler.GenerateBlocks(1)
+func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
+	resp := g.tm.BitcoindHandler.GenerateBlocks(ctx, 1)
 	hash, err := chainhash.NewHashFromStr(resp.Blocks[0])
 	if err != nil {
 		return err
@@ -100,7 +102,7 @@ func (g *BTCHeaderGenerator) genBlocks() error {
 	if err != nil {
 		return err
 	}
-	_, err = g.client.InsertBTCHeadersToBabylon([]*wire.BlockHeader{&block.Header})
+	_, err = g.client.InsertBTCHeadersToBabylon(ctx, []*wire.BlockHeader{&block.Header})
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
@@ -36,7 +37,7 @@ func NewBitcoindHandler(manager *container.Manager) *BitcoindTestHandler {
 	}
 }
 
-func (h *BitcoindTestHandler) Start(containerName string) (*dockertest.Resource, error) {
+func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (*dockertest.Resource, error) {
 	// todo(lazar): cleanup
 	tempPath, err := os.MkdirTemp("", "bbn-benchmark-test-*")
 	if err != nil {
@@ -56,13 +57,13 @@ func (h *BitcoindTestHandler) Start(containerName string) (*dockertest.Resource,
 	//	_ = h.m.ClearResources()
 	//})
 
-	err = lib.Eventually(func() bool {
-		_, err = h.GetBlockCount()
+	err = lib.Eventually(ctx, func() bool {
+		_, err = h.GetBlockCount(ctx)
 		if err != nil {
 			fmt.Printf("failed to get block count: %v", err)
 		}
 		return err == nil
-	}, startTimeout, 500*time.Millisecond)
+	}, startTimeout, 500*time.Millisecond, "err waiting for block count")
 
 	if err != nil {
 		return nil, err
@@ -72,8 +73,8 @@ func (h *BitcoindTestHandler) Start(containerName string) (*dockertest.Resource,
 }
 
 // GetBlockCount retrieves the current number of blocks in the blockchain from the Bitcoind.
-func (h *BitcoindTestHandler) GetBlockCount() (int, error) {
-	buff, _, err := h.m.ExecBitcoindCliCmd([]string{"getblockcount"})
+func (h *BitcoindTestHandler) GetBlockCount(ctx context.Context) (int, error) {
+	buff, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"getblockcount"})
 	if err != nil {
 		return 0, err
 	}
@@ -84,8 +85,8 @@ func (h *BitcoindTestHandler) GetBlockCount() (int, error) {
 }
 
 // GenerateBlocks mines a specified number of blocks in the Bitcoind.
-func (h *BitcoindTestHandler) GenerateBlocks(count int) *GenerateBlockResponse {
-	buff, _, err := h.m.ExecBitcoindCliCmd([]string{"-generate", fmt.Sprintf("%d", count)})
+func (h *BitcoindTestHandler) GenerateBlocks(ctx context.Context, count int) *GenerateBlockResponse {
+	buff, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"-generate", fmt.Sprintf("%d", count)})
 	if err != nil {
 		panic(err)
 	}
@@ -100,9 +101,9 @@ func (h *BitcoindTestHandler) GenerateBlocks(count int) *GenerateBlockResponse {
 }
 
 // CreateWallet creates a new wallet with the specified name and passphrase in the Bitcoind
-func (h *BitcoindTestHandler) CreateWallet(walletName string, passphrase string) *CreateWalletResponse {
+func (h *BitcoindTestHandler) CreateWallet(ctx context.Context, walletName string, passphrase string) *CreateWalletResponse {
 	// last arg is true which indicates we are using descriptor wallets they do not allow dumping private keys.
-	buff, _, err := h.m.ExecBitcoindCliCmd([]string{"createwallet", walletName, "false", "false", passphrase, "false", "true"})
+	buff, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"createwallet", walletName, "false", "false", passphrase, "false", "true"})
 	if err != nil {
 		panic(err)
 	}
@@ -117,16 +118,16 @@ func (h *BitcoindTestHandler) CreateWallet(walletName string, passphrase string)
 }
 
 // InvalidateBlock invalidates blocks starting from specified block hash
-func (h *BitcoindTestHandler) InvalidateBlock(blockHash string) {
-	_, _, err := h.m.ExecBitcoindCliCmd([]string{"invalidateblock", blockHash})
+func (h *BitcoindTestHandler) InvalidateBlock(ctx context.Context, blockHash string) {
+	_, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"invalidateblock", blockHash})
 	if err != nil {
 		panic(err)
 	}
 }
 
 // ImportDescriptors imports a given Bitcoin address descriptor into the Bitcoind
-func (h *BitcoindTestHandler) ImportDescriptors(descriptor string) {
-	_, _, err := h.m.ExecBitcoindCliCmd([]string{"importdescriptors", descriptor})
+func (h *BitcoindTestHandler) ImportDescriptors(ctx context.Context, descriptor string) {
+	_, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"importdescriptors", descriptor})
 	if err != nil {
 		panic(err)
 	}

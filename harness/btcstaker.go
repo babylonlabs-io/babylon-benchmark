@@ -49,7 +49,7 @@ func NewBTCStaker(
 	}
 }
 
-func (s *BTCStaker) Start() error {
+func (s *BTCStaker) Start(ctx context.Context) error {
 	stakerAddress, err := s.tm.TestRpcClient.GetNewAddress("")
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (s *BTCStaker) Start() error {
 	}
 
 	s.wg.Add(1)
-	go s.runForever(stakerAddress, pk)
+	go s.runForever(ctx, stakerAddress, pk)
 
 	return nil
 }
@@ -80,19 +80,19 @@ func (s *BTCStaker) Stop() {
 }
 
 // infinite loop to constantly send delegations
-func (s *BTCStaker) runForever(stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
+func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
 	defer s.wg.Done()
 
 	for {
 		select {
-		case <-s.quit:
+		case <-ctx.Done():
 			return
 		default:
 			paramsResp, err := s.client.BTCStakingParams()
 			if err != nil {
 				panic(err)
 			}
-			s.buildAndSendStakingTransaction(stakerAddress, stakerPk, &paramsResp.Params)
+			s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 		}
 	}
 }
@@ -357,6 +357,7 @@ func (s *BTCStaker) buildInclusion(
 }
 
 func (s *BTCStaker) buildAndSendStakingTransaction(
+	ctx context.Context,
 	stakerAddress btcutil.Address,
 	stakerPk *btcec.PublicKey,
 	params *btcstypes.Params,
@@ -524,7 +525,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		DelegatorUnbondingSlashingSig: unbondingSlashingSig,
 	}
 
-	resp, err := s.client.SendMsgs(context.Background(), []sdk.Msg{msgBTCDel})
+	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel})
 	if err != nil {
 		return err
 	}

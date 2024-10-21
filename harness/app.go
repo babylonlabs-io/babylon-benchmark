@@ -12,30 +12,30 @@ func Run(ctx context.Context) error {
 
 func startHarness(ctx context.Context) error {
 	numMatureOutputs := uint32(500)
-	tm, err := StartManager(numMatureOutputs, 10)
+	tm, err := StartManager(ctx, numMatureOutputs, 10)
 	if err != nil {
 		return err
 	}
 	defer tm.Stop()
 
-	cpSender, err := NewSenderWithBabylonClient("node0", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	headerSender, err := NewSenderWithBabylonClient("headerreporter", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	vigilanteSender, err := NewSenderWithBabylonClient("vigilante", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err
 	}
 
-	if err := tm.fundAllParties([]*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender}); err != nil {
+	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender}); err != nil {
 		return err
 	}
 
-	fpResp, fpInfo, err := cpSender.CreateFinalityProvider()
+	fpResp, fpInfo, err := cpSender.CreateFinalityProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func startHarness(ctx context.Context) error {
 
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(fmt.Sprintf("staker%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 		if err != nil {
 			return err
 		}
@@ -55,42 +55,41 @@ func startHarness(ctx context.Context) error {
 	}
 
 	// fund all stakers
-	if err := tm.fundAllParties(senders(stakers)); err != nil {
+	if err := tm.fundAllParties(ctx, senders(stakers)); err != nil {
 		return err
 	}
 
 	gen := NewBTCHeaderGenerator(tm, headerSender)
-	gen.Start()
+	gen.Start(ctx)
 	defer gen.Stop()
 
 	vig := NewSubReporter(tm, vigilanteSender)
-	vig.Start()
+	vig.Start(ctx)
 	defer vig.Stop()
 
 	// start stakers and defer stops
 	// TODO(lazar): Ideally stakers would start on different times to reduce contention
 	// on funding BTC wallet
 	for _, staker := range stakers {
-		if err := staker.Start(); err != nil {
+		if err := staker.Start(ctx); err != nil {
 			return err
 		}
 		defer staker.Stop()
 	}
 
-	covenantSender, err := NewSenderWithBabylonClient("covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err
 	}
 	covenant := NewCovenantEmulator(tm, container.CovenantPrivKey, covenantSender)
-	if err := tm.fundAllParties([]*SenderWithBabylonClient{covenantSender}); err != nil {
+	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{covenantSender}); err != nil {
 		return err
 	}
 
-	covenant.Start()
+	covenant.Start(ctx)
 	defer covenant.Stop()
 
 	<-ctx.Done()
-	tm.Stop()
 
 	return nil
 }

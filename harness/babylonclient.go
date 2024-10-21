@@ -41,7 +41,7 @@ type Client struct {
 }
 
 func New(
-	cfg *config.BabylonConfig, logger *zap.Logger) (*Client, error) {
+	ctx context.Context, cfg *config.BabylonConfig, logger *zap.Logger) (*Client, error) {
 	var (
 		zapLogger *zap.Logger
 		err       error
@@ -85,7 +85,7 @@ func New(
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
 	// connection with Babylon node
-	err = cp.Init(context.Background())
+	err = cp.Init(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +120,7 @@ type SenderWithBabylonClient struct {
 }
 
 func NewSenderWithBabylonClient(
+	ctx context.Context,
 	keyName string,
 	rpcaddr string,
 	grpcaddr string) (*SenderWithBabylonClient, error) {
@@ -132,7 +133,7 @@ func NewSenderWithBabylonClient(
 	cfg.GRPCAddr = grpcaddr
 	cfg.GasAdjustment = 3.0
 
-	cl, err := New(&cfg, zap.NewNop())
+	cl, err := New(ctx, &cfg, zap.NewNop())
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +180,7 @@ func ToProviderMsgs(msgs []sdk.Msg) []pv.RelayerMessage {
 	return relayerMsgs
 }
 
-func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
+func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
 	var headersBytes []bbntypes.BTCHeaderBytes
 
 	for _, h := range headers {
@@ -191,10 +192,10 @@ func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(headers []*wire.Bloc
 		Signer:  s.BabylonAddress.String(),
 	}
 
-	return s.SendMsgs(context.Background(), []sdk.Msg{&msg})
+	return s.SendMsgs(ctx, []sdk.Msg{&msg})
 }
 
-func (s *SenderWithBabylonClient) CreateFinalityProvider() (*pv.RelayerTxResponse, *bstypes.FinalityProvider, error) {
+func (s *SenderWithBabylonClient) CreateFinalityProvider(ctx context.Context) (*pv.RelayerTxResponse, *bstypes.FinalityProvider, error) {
 	var err error
 	signerAddr := s.BabylonAddress.String()
 	addr := sdk.MustAccAddressFromBech32(signerAddr)
@@ -216,7 +217,7 @@ func (s *SenderWithBabylonClient) CreateFinalityProvider() (*pv.RelayerTxRespons
 		BtcPk:       btcFp.BtcPk,
 		Pop:         btcFp.Pop,
 	}
-	resp, err := s.SendMsgs(context.Background(), []sdk.Msg{msgNewVal})
+	resp, err := s.SendMsgs(ctx, []sdk.Msg{msgNewVal})
 
 	if err != nil {
 		return resp, nil, err

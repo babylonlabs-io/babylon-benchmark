@@ -39,9 +39,9 @@ func NewCovenantEmulator(
 	}
 }
 
-func (c *CovenanEmulator) Start() {
+func (c *CovenanEmulator) Start(ctx context.Context) {
 	c.wg.Add(1)
-	go c.runForever()
+	go c.runForever(ctx)
 }
 
 func (c *CovenanEmulator) Stop() {
@@ -49,17 +49,17 @@ func (c *CovenanEmulator) Stop() {
 	c.wg.Wait()
 }
 
-func (c *CovenanEmulator) runForever() {
+func (c *CovenanEmulator) runForever(ctx context.Context) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Second)
 
 	for {
 		select {
-		case <-c.quit:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := c.sendMsgsWithSig(); err != nil {
+			if err := c.sendMsgsWithSig(ctx); err != nil {
 				fmt.Printf("err sending cov msgs %v", err)
 				panic(err)
 			}
@@ -67,7 +67,7 @@ func (c *CovenanEmulator) runForever() {
 	}
 }
 
-func (c *CovenanEmulator) sendMsgsWithSig() error {
+func (c *CovenanEmulator) sendMsgsWithSig(ctx context.Context) error {
 	params, err := c.client.BTCStakingParams()
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (c *CovenanEmulator) sendMsgsWithSig() error {
 
 	messages, err := c.messagesWithSignatures(respo.BtcDelegations, &params.Params)
 
-	resp, err := c.client.SendMsgs(context.Background(), messages)
+	resp, err := c.client.SendMsgs(ctx, messages)
 	if err != nil {
 		return err
 	}

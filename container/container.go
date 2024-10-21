@@ -56,17 +56,17 @@ func NewManager() (docker *Manager, err error) {
 	return docker, nil
 }
 
-func (m *Manager) ExecBitcoindCliCmd(command []string) (bytes.Buffer, bytes.Buffer, error) {
+func (m *Manager) ExecBitcoindCliCmd(ctx context.Context, command []string) (bytes.Buffer, bytes.Buffer, error) {
 	// this is currently hardcoded, as it will be the same for all tests
 	cmd := []string{"bitcoin-cli", "-chain=regtest", "-rpcuser=user", "-rpcpassword=pass"}
 	cmd = append(cmd, command...)
-	return m.ExecCmd(bitcoindContainerName, cmd)
+	return m.ExecCmd(ctx, bitcoindContainerName, cmd)
 }
 
 // ExecCmd executes command by running it on the given container.
 // It word for word `error` in output to discern between error and regular output.
 // It returns stdout and stderr as bytes.Buffer and an error if the command fails.
-func (m *Manager) ExecCmd(containerName string, command []string) (bytes.Buffer, bytes.Buffer, error) {
+func (m *Manager) ExecCmd(ctx context.Context, containerName string, command []string) (bytes.Buffer, bytes.Buffer, error) {
 	if _, ok := m.resources[containerName]; !ok {
 		return bytes.Buffer{}, bytes.Buffer{}, fmt.Errorf("no resource %s found", containerName)
 	}
@@ -85,6 +85,7 @@ func (m *Manager) ExecCmd(containerName string, command []string) (bytes.Buffer,
 	// sequence numbers. For simplicity, we avoid keeping track of the sequence number and just use the `require.Eventually`.
 	var innerErr error
 	err := lib.Eventually(
+		ctx,
 		func() bool {
 			exec, err := m.pool.Client.CreateExec(docker.CreateExecOptions{
 				Context:      ctx,

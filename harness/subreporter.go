@@ -36,9 +36,9 @@ func NewSubReporter(
 	}
 }
 
-func (s *SubReporter) Start() {
+func (s *SubReporter) Start(ctx context.Context) {
 	s.wg.Add(1)
-	go s.runForever()
+	go s.runForever(ctx)
 }
 
 func (s *SubReporter) Stop() {
@@ -46,14 +46,14 @@ func (s *SubReporter) Stop() {
 	s.wg.Wait()
 }
 
-func (s *SubReporter) runForever() {
+func (s *SubReporter) runForever(ctx context.Context) {
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Second)
 
 	for {
 		select {
-		case <-s.quit:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			// last ea
@@ -72,7 +72,7 @@ func (s *SubReporter) runForever() {
 
 			fmt.Printf("retrieved checkpoint for epoch %d\n", firstSelead.Ckpt.EpochNum)
 
-			if err = s.buildSendReportCheckpoint(firstSelead.Ckpt); err != nil {
+			if err = s.buildSendReportCheckpoint(ctx, firstSelead.Ckpt); err != nil {
 				fmt.Printf("err buildSendReportCheckpoint for epoch %d err:%v\n", firstSelead.Ckpt.EpochNum, err)
 			}
 		}
@@ -106,7 +106,7 @@ func (s *SubReporter) encodeCheckpointData(ckpt *checkpointingtypes.RawCheckpoin
 	return data1, data2, nil
 }
 
-func (s *SubReporter) buildSendReportCheckpoint(ckpt *checkpointingtypes.RawCheckpointResponse) error {
+func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *checkpointingtypes.RawCheckpointResponse) error {
 	data1, data2, err := s.encodeCheckpointData(ckpt)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ckpt *checkpointingtypes.RawChec
 		Proofs:    proofs,
 	}
 
-	resp, err := s.client.SendMsgs(context.Background(), []sdk.Msg{msg})
+	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
 	}
