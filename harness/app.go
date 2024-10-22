@@ -13,7 +13,7 @@ func Run(ctx context.Context) error {
 
 func startHarness(ctx context.Context) error {
 	numMatureOutputs := uint32(500)
-	tm, err := StartManager(ctx, numMatureOutputs, 10)
+	tm, err := StartManager(ctx, numMatureOutputs, 5)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,12 @@ func startHarness(ctx context.Context) error {
 		return err
 	}
 
-	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender}); err != nil {
+	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	if err != nil {
+		return err
+	}
+
+	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender, fpmSender}); err != nil {
 		return err
 	}
 
@@ -54,16 +59,24 @@ func startHarness(ctx context.Context) error {
 	}
 	defer cleanupDir(keyDir)
 
-	fpMgr := NewFinalityProviderManager(tm, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
+	gen := NewBTCHeaderGenerator(tm, headerSender)
+	gen.Start(ctx)
+	defer gen.Stop()
+
+	vig := NewSubReporter(tm, vigilanteSender)
+	vig.Start(ctx)
+	defer vig.Stop()
+
+	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
 
-	fpResp, fpInfo, err := cpSender.CreateFinalityProvider(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Println(fpResp)
+	//fpResp, fpInfo, err := cpSender.CreateFinalityProvider(ctx)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println(fpResp)
 
 	numStakers := 50
 
@@ -73,7 +86,7 @@ func startHarness(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		staker := NewBTCStaker(tm, stakerSender, fpInfo.BtcPk.MustToBTCPK())
+		staker := NewBTCStaker(tm, stakerSender, fpMgr.finalityProviders[0].btcPk.MustToBTCPK()) // todo(lazar): choose fp rand
 		stakers = append(stakers, staker)
 	}
 
@@ -81,14 +94,6 @@ func startHarness(ctx context.Context) error {
 	if err := tm.fundAllParties(ctx, senders(stakers)); err != nil {
 		return err
 	}
-
-	gen := NewBTCHeaderGenerator(tm, headerSender)
-	gen.Start(ctx)
-	defer gen.Stop()
-
-	vig := NewSubReporter(tm, vigilanteSender)
-	vig.Start(ctx)
-	defer vig.Stop()
 
 	// start stakers and defer stops
 	// TODO(lazar): Ideally stakers would start on different times to reduce contention

@@ -8,12 +8,14 @@ import (
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/crypto/tmhash"
+	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -32,7 +34,7 @@ type BlockInfo struct {
 type FinalityProviderManager struct {
 	tm                *TestManager
 	client            *SenderWithBabylonClient
-	finalityProviders []FinalityProviderInstance
+	finalityProviders []*FinalityProviderInstance
 	wg                *sync.WaitGroup
 	logger            *zap.Logger
 	localEOTS         *eotsmanager.LocalEOTSManager
@@ -54,6 +56,7 @@ type FinalityProviderInstance struct {
 
 func NewFinalityProviderManager(
 	tm *TestManager,
+	client *SenderWithBabylonClient,
 	logger *zap.Logger,
 	fpCount int,
 	homeDir string,
@@ -62,6 +65,7 @@ func NewFinalityProviderManager(
 ) *FinalityProviderManager {
 	return &FinalityProviderManager{
 		tm:      tm,
+		client:  client,
 		wg:      &sync.WaitGroup{},
 		logger:  logger,
 		fpCount: fpCount,
@@ -87,7 +91,12 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 		return err
 	}
 
-	fpis := make([]FinalityProviderInstance, fpm.fpCount)
+	fpis := make([]*FinalityProviderInstance, fpm.fpCount)
+
+	res, err := fpm.tm.BabylonClient.CurrentEpoch()
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < fpm.fpCount; i++ {
 		keyName := lib.GenRandomHexStr(r, 10)
@@ -119,7 +128,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		fpis[i] = FinalityProviderInstance{
+		fpis[i] = &FinalityProviderInstance{
 			btcPk:      btcPk,
 			proofStore: lib.NewPubRandProofStore(),
 			pop:        pop,
@@ -135,8 +144,13 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	fpm.finalityProviders = fpis
 	fpm.localEOTS = eots
 
-	fmt.Printf("starting to commit randomness")
+	fmt.Printf("starting to commit randomness\n")
 	if err := fpm.commitRandomness(ctx); err != nil {
+		return err
+	}
+
+	fmt.Printf("waiting to be finalized\n")
+	if err := fpm.waitUntilFinalized(ctx, res.CurrentEpoch); err != nil {
 		return err
 	}
 
@@ -158,7 +172,31 @@ func (fpm *FinalityProviderManager) commitRandomnessForever(ctx context.Context)
 			_ = tipBlock
 
 		case <-ctx.Done():
-			fmt.Printf("the randomness commitment loop is closing")
+			return
+		}
+	}
+}
+
+func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context) {
+	commitRandTicker := time.NewTicker(10 * time.Second)
+	defer commitRandTicker.Stop()
+
+	for {
+		select {
+		case <-commitRandTicker.C:
+			tipBlock, err := fpm.getLatestBlockWithRetry(ctx)
+			if err != nil {
+
+				continue
+			}
+			for _, fp := range fpm.finalityProviders {
+				err := fpm.submitFinalitySignature(ctx, tipBlock, fp)
+				if err != nil {
+					fmt.Printf("err submitting fin signature %v\n", err)
+				}
+			}
+
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -382,4 +420,97 @@ func (fpm *FinalityProviderManager) signPubRandCommit(fpPk bbntypes.BIP340PubKey
 
 	// sign the message hash using the finality-provider's BTC private key
 	return fpm.localEOTS.SignSchnorrSig(fpPk.MustMarshal(), hash, fpm.passphrase)
+}
+
+func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
+	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
+}
+
+func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context, b *BlockInfo, fpi *FinalityProviderInstance) error {
+	sig, err := fpm.signFinalitySig(b, fpi.btcPk)
+	if err != nil {
+		return err
+	}
+
+	prList, err := fpm.getPubRandList(b.Height, 1, *fpi.btcPk)
+	if err != nil {
+		return err
+	}
+
+	pubRand := prList[0]
+
+	proofBytes, err := fpi.proofStore.GetPubRandProof(pubRand)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to get inclusion proof of public randomness %s for FP %s for block %d: %w",
+			pubRand.String(),
+			fpi.btcPk.MarshalHex(),
+			b.Height,
+			err,
+		)
+	}
+
+	err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, pubRand, proofBytes, sig.ToModNScalar())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fpm *FinalityProviderManager) signFinalitySig(b *BlockInfo, btcPk *bbntypes.BIP340PubKey) (*bbntypes.SchnorrEOTSSig, error) {
+	// build proper finality signature request
+	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
+	sig, err := fpm.localEOTS.SignEOTS(btcPk.MustMarshal(), []byte(chainId), msgToSign, b.Height, fpm.passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+	}
+
+	return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
+}
+
+// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon
+func (fpi *FinalityProviderInstance) SubmitFinalitySig(
+	ctx context.Context,
+	fpPk *btcec.PublicKey,
+	block *BlockInfo,
+	pubRand *btcec.FieldVal,
+	proof []byte, // TODO: have a type for proof
+	sig *btcec.ModNScalar,
+) error {
+	cmtProof := cmtcrypto.Proof{}
+	if err := cmtProof.Unmarshal(proof); err != nil {
+		return err
+	}
+
+	msg := &finalitytypes.MsgAddFinalitySig{
+		Signer:       fpi.client.BabylonAddress.String(),
+		FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+		BlockHeight:  block.Height,
+		PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRand),
+		Proof:        &cmtProof,
+		BlockAppHash: block.Hash,
+		FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sig),
+	}
+
+	_, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoch uint64) error {
+
+	err := lib.Eventually(ctx, func() bool {
+		lastFinalizedCkpt, err := fpm.tm.BabylonClient.LatestEpochFromStatus(ckpttypes.Finalized)
+		if err != nil {
+			return false
+		}
+		return epoch <= lastFinalizedCkpt.RawCheckpoint.EpochNum
+
+	}, 120*time.Second, eventuallyPollTime, "err waiting for ckpt to be finalized")
+
+	return err
 }
