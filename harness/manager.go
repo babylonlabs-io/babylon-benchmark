@@ -177,6 +177,8 @@ func (tm *TestManager) Stop() {
 	if err := tm.manger.ClearResources(); err != nil {
 		fmt.Printf("err clearning docker resource %v", err)
 	}
+
+	tm.BitcoindHandler.Stop()
 }
 
 func importPrivateKey(ctx context.Context, btcHandler *BitcoindTestHandler) (*btcec.PrivateKey, error) {
@@ -228,6 +230,10 @@ func tempDir() (string, error) {
 	//})
 
 	return tempPath, err
+}
+
+func cleanupDir(path string) {
+	_ = os.RemoveAll(path)
 }
 
 func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
+	"go.uber.org/zap"
 )
 
 func Run(ctx context.Context) error {
@@ -31,7 +32,35 @@ func startHarness(ctx context.Context) error {
 		return err
 	}
 
+	finalitySender, err := NewSenderWithBabylonClient(ctx, "finalityprovider", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	if err != nil {
+		return err
+	}
+
 	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender}); err != nil {
+		return err
+	}
+
+	fpMgrHome, err := tempDir()
+	if err != nil {
+		return err
+	}
+	defer cleanupDir(fpMgrHome)
+
+	eotsDir, err := tempDir()
+	if err != nil {
+		return err
+	}
+	defer cleanupDir(eotsDir)
+
+	keyDir, err := tempDir()
+	if err != nil {
+		return err
+	}
+	defer cleanupDir(keyDir)
+
+	fpMgr := NewFinalityProviderManager(tm, finalitySender, zap.NewNop(), 5, fpMgrHome, eotsDir, keyDir)
+	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
 
@@ -40,7 +69,6 @@ func startHarness(ctx context.Context) error {
 		return err
 	}
 	fmt.Println(fpResp)
-	fmt.Println(err)
 
 	numStakers := 50
 

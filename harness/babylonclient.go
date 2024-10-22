@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"math/rand"
 	"time"
 
@@ -28,7 +29,11 @@ import (
 )
 
 var (
-	r = rand.New(rand.NewSource(time.Now().Unix()))
+	r         = rand.New(rand.NewSource(time.Now().Unix()))
+	RtyAttNum = uint(5)
+	RtyAtt    = retry.Attempts(RtyAttNum)
+	RtyDel    = retry.Delay(time.Millisecond * 400)
+	RtyErr    = retry.LastErrorOnly(true)
 )
 
 type Client struct {

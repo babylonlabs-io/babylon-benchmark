@@ -28,7 +28,8 @@ type GenerateBlockResponse struct {
 }
 
 type BitcoindTestHandler struct {
-	m *container.Manager
+	m    *container.Manager
+	path string
 }
 
 func NewBitcoindHandler(manager *container.Manager) *BitcoindTestHandler {
@@ -38,32 +39,18 @@ func NewBitcoindHandler(manager *container.Manager) *BitcoindTestHandler {
 }
 
 func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (*dockertest.Resource, error) {
-	// todo(lazar): cleanup
 	tempPath, err := os.MkdirTemp("", "bbn-benchmark-test-*")
 	if err != nil {
 		return nil, err
 	}
-
-	//h.t.Cleanup(func() {
-	//	_ = os.RemoveAll(tempPath)
-	//})
 
 	bitcoinResource, err := h.m.RunBitcoindResource(containerName, tempPath)
 	if err != nil {
 		return nil, err
 	}
 
-	//h.t.Cleanup(func() {
-	//	_ = h.m.ClearResources()
-	//})
-
-	fmt.Println("starting GetBlockCount")
-
 	err = lib.Eventually(ctx, func() bool {
-		fmt.Println("starting 2")
-
 		_, err := h.GetBlockCount(ctx)
-		fmt.Println("starting 3")
 
 		if err != nil {
 			fmt.Printf("failed to get block count: %v", err)
@@ -75,6 +62,8 @@ func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (
 	if err != nil {
 		return nil, err
 	}
+
+	h.path = tempPath
 
 	return bitcoinResource, nil
 }
@@ -141,5 +130,5 @@ func (h *BitcoindTestHandler) ImportDescriptors(ctx context.Context, descriptor 
 }
 
 func (h *BitcoindTestHandler) Stop() {
-	_ = h.m.ClearResources()
+	cleanupDir(h.path)
 }
