@@ -53,12 +53,6 @@ func startHarness(ctx context.Context) error {
 	}
 	defer cleanupDir(eotsDir)
 
-	keyDir, err := tempDir()
-	if err != nil {
-		return err
-	}
-	defer cleanupDir(keyDir)
-
 	gen := NewBTCHeaderGenerator(tm, headerSender)
 	gen.Start(ctx)
 	defer gen.Stop()
@@ -67,7 +61,7 @@ func startHarness(ctx context.Context) error {
 	vig.Start(ctx)
 	defer vig.Stop()
 
-	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 3, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
+	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 3, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}

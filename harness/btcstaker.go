@@ -76,7 +76,6 @@ func (s *BTCStaker) Start(ctx context.Context) error {
 
 func (s *BTCStaker) Stop() {
 	close(s.quit)
-	//s.wg.Wait()
 }
 
 // infinite loop to constantly send delegations

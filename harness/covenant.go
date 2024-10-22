@@ -17,7 +17,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type CovenanEmulator struct {
+type CovenantEmulator struct {
 	tm     *TestManager
 	client *SenderWithBabylonClient
 	covKey *btcec.PrivateKey
@@ -29,8 +29,8 @@ func NewCovenantEmulator(
 	tm *TestManager,
 	covKey *btcec.PrivateKey,
 	client *SenderWithBabylonClient,
-) *CovenanEmulator {
-	return &CovenanEmulator{
+) *CovenantEmulator {
+	return &CovenantEmulator{
 		tm:     tm,
 		client: client,
 		covKey: covKey,
@@ -39,17 +39,16 @@ func NewCovenantEmulator(
 	}
 }
 
-func (c *CovenanEmulator) Start(ctx context.Context) {
+func (c *CovenantEmulator) Start(ctx context.Context) {
 	c.wg.Add(1)
 	go c.runForever(ctx)
 }
 
-func (c *CovenanEmulator) Stop() {
+func (c *CovenantEmulator) Stop() {
 	close(c.quit)
-	//c.wg.Wait()
 }
 
-func (c *CovenanEmulator) runForever(ctx context.Context) {
+func (c *CovenantEmulator) runForever(ctx context.Context) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -67,7 +66,7 @@ func (c *CovenanEmulator) runForever(ctx context.Context) {
 	}
 }
 
-func (c *CovenanEmulator) sendMsgsWithSig(ctx context.Context) error {
+func (c *CovenantEmulator) sendMsgsWithSig(ctx context.Context) error {
 	params, err := c.client.BTCStakingParams()
 	if err != nil {
 		return err
@@ -101,7 +100,7 @@ func (c *CovenanEmulator) sendMsgsWithSig(ctx context.Context) error {
 	return nil
 }
 
-func (c *CovenanEmulator) covenantSignatures(
+func (c *CovenantEmulator) covenantSignatures(
 	fpEncKey *asig.EncryptionKey,
 	stakingSlashingTx *wire.MsgTx,
 	stakingTx *wire.MsgTx,
@@ -151,7 +150,7 @@ func (c *CovenanEmulator) covenantSignatures(
 	return slashSig, slashUnbondingSig, unbondingSig, nil
 }
 
-func (c *CovenanEmulator) messagesWithSignatures(resp []*bstypes.BTCDelegationResponse, params *bstypes.Params) ([]sdk.Msg, error) {
+func (c *CovenantEmulator) messagesWithSignatures(resp []*bstypes.BTCDelegationResponse, params *bstypes.Params) ([]sdk.Msg, error) {
 	var msgs []sdk.Msg
 
 	for _, del := range resp {

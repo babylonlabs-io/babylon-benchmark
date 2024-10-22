@@ -39,21 +39,17 @@ type FinalityProviderManager struct {
 	logger            *zap.Logger
 	localEOTS         *eotsmanager.LocalEOTSManager
 	blockInfoChan     chan *BlockInfo
-
-	quit       chan struct{}
-	passphrase string
-	fpCount    int
-	homeDir    string
-	eotsDb     string
-	keyDir     string
+	passphrase        string
+	fpCount           int
+	homeDir           string
+	eotsDb            string
 }
 type FinalityProviderInstance struct {
-	btcPk               *bbntypes.BIP340PubKey
-	proofStore          *lib.PubRandProofStore
-	fpAddr              sdk.AccAddress
-	pop                 *bstypes.ProofOfPossessionBTC
-	client              *SenderWithBabylonClient
-	lastProcessedHeight uint64
+	btcPk      *bbntypes.BIP340PubKey
+	proofStore *lib.PubRandProofStore
+	fpAddr     sdk.AccAddress
+	pop        *bstypes.ProofOfPossessionBTC
+	client     *SenderWithBabylonClient
 }
 
 func NewFinalityProviderManager(
@@ -63,7 +59,6 @@ func NewFinalityProviderManager(
 	fpCount int,
 	homeDir string,
 	eotsDir string,
-	keyDir string,
 ) *FinalityProviderManager {
 	return &FinalityProviderManager{
 		tm:            tm,
@@ -71,11 +66,9 @@ func NewFinalityProviderManager(
 		wg:            &sync.WaitGroup{},
 		logger:        logger,
 		fpCount:       fpCount,
-		quit:          make(chan struct{}),
 		blockInfoChan: make(chan *BlockInfo, 1000),
 		homeDir:       homeDir,
 		eotsDb:        eotsDir,
-		keyDir:        keyDir,
 	}
 }
 
@@ -277,22 +270,6 @@ func (fpi *FinalityProviderInstance) commitPubRandList(
 	return nil
 }
 
-func (fpm *FinalityProviderManager) queryLastCommittedPublicRand(fpPk *btcec.PublicKey, count uint64) (map[uint64]*finalitytypes.PubRandCommitResponse, error) {
-	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-
-	pagination := &sdkquery.PageRequest{
-		Limit:   count,
-		Reverse: true,
-	}
-
-	res, err := fpm.client.QueryClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query committed public randomness: %w", err)
-	}
-
-	return res.PubRandCommitMap, nil
-}
-
 func (fpm *FinalityProviderManager) queryLatestBlocks(startKey []byte, count uint64, status finalitytypes.QueriedBlockStatus, reverse bool) ([]*BlockInfo, error) {
 	var blocks []*BlockInfo
 	pagination := &sdkquery.PageRequest{
@@ -409,6 +386,7 @@ func GetPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle
 	for _, pr := range pubRandList {
 		prBytesList = append(prBytesList, bbntypes.NewSchnorrPubRandFromFieldVal(pr).MustMarshal())
 	}
+
 	return merkle.ProofsFromByteSlices(prBytesList)
 }
 
@@ -469,8 +447,6 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
-	fpi.lastProcessedHeight = b.Height
 
 	fmt.Printf("✍️: fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
 
