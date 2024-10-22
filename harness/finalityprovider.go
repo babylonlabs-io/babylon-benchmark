@@ -135,6 +135,11 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	fpm.finalityProviders = fpis
 	fpm.localEOTS = eots
 
+	fmt.Printf("starting to commit randomness")
+	if err := fpm.commitRandomness(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -157,6 +162,36 @@ func (fpm *FinalityProviderManager) commitRandomnessForever(ctx context.Context)
 			return
 		}
 	}
+}
+
+func (fpm *FinalityProviderManager) commitRandomness(ctx context.Context) error {
+	startHeight := uint64(1) // todo(lazar): configure
+	npr := uint32(1000)
+	for _, fp := range fpm.finalityProviders {
+		pubRandList, err := fpm.getPubRandList(startHeight, npr, *fp.btcPk)
+		if err != nil {
+			return err
+		}
+		numPubRand := uint64(len(pubRandList))
+		commitment, proofList := GetPubRandCommitAndProofs(pubRandList)
+
+		if err := fp.proofStore.AddPubRandProofList(pubRandList, proofList); err != nil {
+			return err
+		}
+
+		schnorrSig, err := fpm.signPubRandCommit(*fp.btcPk, startHeight, numPubRand, commitment)
+		if err != nil {
+			return err
+		}
+
+		err = fp.commitPubRandList(ctx, fp.btcPk.MustToBTCPK(), startHeight, numPubRand, commitment, schnorrSig)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }
 
 func (fpi *FinalityProviderInstance) register(
@@ -183,7 +218,7 @@ func (fpi *FinalityProviderInstance) register(
 	return resp, nil
 }
 
-func (fpm *FinalityProviderManager) commitPubRandList(
+func (fpi *FinalityProviderInstance) commitPubRandList(
 	ctx context.Context,
 	fpPk *btcec.PublicKey,
 	startHeight uint64,
@@ -191,7 +226,7 @@ func (fpm *FinalityProviderManager) commitPubRandList(
 	commitment []byte,
 	sig *schnorr.Signature) error {
 	msg := &finalitytypes.MsgCommitPubRandList{
-		Signer:      fpm.client.BabylonAddress.String(),
+		Signer:      fpi.client.BabylonAddress.String(),
 		FpBtcPk:     bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 		StartHeight: startHeight,
 		NumPubRand:  numPubRand,
@@ -199,7 +234,7 @@ func (fpm *FinalityProviderManager) commitPubRandList(
 		Sig:         bbntypes.NewBIP340SignatureFromBTCSig(sig),
 	}
 
-	resp, err := fpm.client.SendMsgs(ctx, []sdk.Msg{msg})
+	resp, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
 	}

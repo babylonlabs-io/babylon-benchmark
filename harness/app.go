@@ -54,7 +54,7 @@ func startHarness(ctx context.Context) error {
 	}
 	defer cleanupDir(keyDir)
 
-	fpMgr := NewFinalityProviderManager(tm, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir)
+	fpMgr := NewFinalityProviderManager(tm, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
