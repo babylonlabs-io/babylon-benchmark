@@ -10,7 +10,6 @@ import (
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	"github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/merkle"
@@ -20,7 +19,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"strings"
 	"sync"
 	"time"
 )
@@ -51,11 +49,11 @@ type FinalityProviderInstance struct {
 	proofStore *lib.PubRandProofStore
 	fpAddr     sdk.AccAddress
 	pop        *bstypes.ProofOfPossessionBTC
+	client     *SenderWithBabylonClient
 }
 
 func NewFinalityProviderManager(
 	tm *TestManager,
-	client *SenderWithBabylonClient,
 	logger *zap.Logger,
 	fpCount int,
 	homeDir string,
@@ -64,7 +62,6 @@ func NewFinalityProviderManager(
 ) *FinalityProviderManager {
 	return &FinalityProviderManager{
 		tm:      tm,
-		client:  client,
 		wg:      &sync.WaitGroup{},
 		logger:  logger,
 		fpCount: fpCount,
@@ -92,16 +89,18 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 
 	fpis := make([]FinalityProviderInstance, fpm.fpCount)
 
-	input := strings.NewReader("")
-	kr, err := keyring.CreateKeyring(
-		fpm.keyDir,
-		chainId,
-		"memory",
-		input,
-	)
-
 	for i := 0; i < fpm.fpCount; i++ {
 		keyName := lib.GenRandomHexStr(r, 10)
+
+		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon.RPCAddr, fpm.tm.Config.Babylon.GRPCAddr)
+		if err != nil {
+			return err
+		}
+
+		if err := fpm.tm.fundAllParties(ctx, []*SenderWithBabylonClient{finalitySender}); err != nil {
+			return err
+		}
+
 		fpPK, err := eots.CreateKey(keyName, fpm.passphrase, "") // todo(lazar): hdpath?
 		if err != nil {
 			return err
@@ -110,23 +109,13 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = keyring.NewChainKeyringControllerWithKeyring(kr, keyName, input)
-		if err != nil {
-			return err
-		}
-		//keyInfo, err := kc.CreateChainKey(fpm.passphrase, "", "")
-		//if err != nil {
-		//	return err
-		//}
+
 		fpRecord, err := eots.KeyRecord(btcPk.MustMarshal(), fpm.passphrase)
 		if err != nil {
 			return err
 		}
-		//pop, err := kc.CreatePop(fpm.client.BabylonAddress, fpRecord.PrivKey) // todo(lazar): check the fp addr?
-		//if err != nil {
-		//	return err
-		//}
-		pop, err := bstypes.NewPoPBTC(fpm.client.BabylonAddress, fpRecord.PrivKey)
+
+		pop, err := bstypes.NewPoPBTC(finalitySender.BabylonAddress, fpRecord.PrivKey)
 		if err != nil {
 			return err
 		}
@@ -134,10 +123,11 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 			btcPk:      btcPk,
 			proofStore: lib.NewPubRandProofStore(),
 			pop:        pop,
-			fpAddr:     fpm.client.BabylonAddress,
+			fpAddr:     finalitySender.BabylonAddress,
+			client:     finalitySender,
 		}
 
-		if _, err = fpm.register(ctx, btcPk, pop); err != nil {
+		if _, err = fpis[i].register(ctx, finalitySender.BabylonAddress.String(), btcPk, pop); err != nil {
 			return err
 		}
 	}
@@ -169,9 +159,8 @@ func (fpm *FinalityProviderManager) commitRandomnessForever(ctx context.Context)
 	}
 }
 
-func (fpm *FinalityProviderManager) register(
-	ctx context.Context, fpPk *bbntypes.BIP340PubKey, pop *bstypes.ProofOfPossessionBTC) (*pv.RelayerTxResponse, error) {
-	signerAddr := fpm.client.BabylonAddress.String()
+func (fpi *FinalityProviderInstance) register(
+	ctx context.Context, signerAddr string, fpPk *bbntypes.BIP340PubKey, pop *bstypes.ProofOfPossessionBTC) (*pv.RelayerTxResponse, error) {
 
 	commission := sdkmath.LegacyZeroDec()
 	msgNewVal := &bstypes.MsgCreateFinalityProvider{
@@ -181,7 +170,7 @@ func (fpm *FinalityProviderManager) register(
 		BtcPk:       fpPk,
 		Pop:         pop,
 	}
-	resp, err := fpm.client.SendMsgs(ctx, []sdk.Msg{msgNewVal})
+	resp, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msgNewVal})
 
 	if err != nil {
 		return nil, err

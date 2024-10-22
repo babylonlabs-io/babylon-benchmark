@@ -32,11 +32,6 @@ func startHarness(ctx context.Context) error {
 		return err
 	}
 
-	finalitySender, err := NewSenderWithBabylonClient(ctx, "finalityprovider", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
-	if err != nil {
-		return err
-	}
-
 	if err := tm.fundAllParties(ctx, []*SenderWithBabylonClient{cpSender, headerSender, vigilanteSender}); err != nil {
 		return err
 	}
@@ -59,7 +54,7 @@ func startHarness(ctx context.Context) error {
 	}
 	defer cleanupDir(keyDir)
 
-	fpMgr := NewFinalityProviderManager(tm, finalitySender, zap.NewNop(), 5, fpMgrHome, eotsDir, keyDir)
+	fpMgr := NewFinalityProviderManager(tm, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir)
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
