@@ -21,7 +21,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"sync"
 	"time"
 )
 
@@ -35,10 +34,8 @@ type FinalityProviderManager struct {
 	tm                *TestManager
 	client            *SenderWithBabylonClient
 	finalityProviders []*FinalityProviderInstance
-	wg                *sync.WaitGroup
 	logger            *zap.Logger
 	localEOTS         *eotsmanager.LocalEOTSManager
-	blockInfoChan     chan *BlockInfo
 	passphrase        string
 	fpCount           int
 	homeDir           string
@@ -61,14 +58,12 @@ func NewFinalityProviderManager(
 	eotsDir string,
 ) *FinalityProviderManager {
 	return &FinalityProviderManager{
-		tm:            tm,
-		client:        client,
-		wg:            &sync.WaitGroup{},
-		logger:        logger,
-		fpCount:       fpCount,
-		blockInfoChan: make(chan *BlockInfo, 1000),
-		homeDir:       homeDir,
-		eotsDb:        eotsDir,
+		tm:      tm,
+		client:  client,
+		logger:  logger,
+		fpCount: fpCount,
+		homeDir: homeDir,
+		eotsDb:  eotsDir,
 	}
 }
 
@@ -157,7 +152,6 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 	commitRandTicker := time.NewTicker(10 * time.Second)
 	defer commitRandTicker.Stop()
 
-	height := uint64(1)
 	for {
 		select {
 		case <-commitRandTicker.C:
@@ -181,7 +175,6 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 					fmt.Printf("err submitting fin signature %v\n", err)
 				}
 			}
-			height++
 		case <-ctx.Done():
 			return
 		}
@@ -197,7 +190,7 @@ func (fpm *FinalityProviderManager) commitRandomness(ctx context.Context) error 
 			return err
 		}
 		numPubRand := uint64(len(pubRandList))
-		commitment, proofList := GetPubRandCommitAndProofs(pubRandList)
+		commitment, proofList := getPubRandCommitAndProofs(pubRandList)
 
 		if err := fp.proofStore.AddPubRandProofList(pubRandList, proofList); err != nil {
 			return err
@@ -264,7 +257,7 @@ func (fpi *FinalityProviderInstance) commitPubRandList(
 	}
 
 	if resp == nil {
-		return err
+		return fmt.Errorf("🚫: resp empty when commiting pub ran")
 	}
 
 	return nil
@@ -381,7 +374,7 @@ func (fpm *FinalityProviderManager) getPubRandList(startHeight uint64, numPubRan
 	return pubRandList, nil
 }
 
-func GetPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle.Proof) {
+func getPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle.Proof) {
 	prBytesList := make([][]byte, 0, len(pubRandList))
 	for _, pr := range pubRandList {
 		prBytesList = append(prBytesList, bbntypes.NewSchnorrPubRandFromFieldVal(pr).MustMarshal())
@@ -470,7 +463,7 @@ func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 	fpPk *btcec.PublicKey,
 	block *BlockInfo,
 	pubRand *btcec.FieldVal,
-	proof []byte, // TODO: have a type for proof
+	proof []byte,
 	sig *btcec.ModNScalar,
 ) error {
 	cmtProof := cmtcrypto.Proof{}
@@ -504,7 +497,7 @@ func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoc
 		}
 		return epoch <= lastFinalizedCkpt.RawCheckpoint.EpochNum
 
-	}, 120*time.Second, eventuallyPollTime, "err waiting for ckpt to be finalized")
+	}, 120*time.Second, eventuallyPollTime, "🚫: err waiting for ckpt to be finalized")
 
 	return err
 }

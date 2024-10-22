@@ -224,11 +224,6 @@ func tempDir() (string, error) {
 		return "", err
 	}
 
-	// todo(lazar): this
-	//t.Cleanup(func() {
-	//	_ = os.RemoveAll(tempPath)
-	//})
-
 	return tempPath, err
 }
 
@@ -248,7 +243,6 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 
 	feeRate := float64(0.00002)
 	pos := 1
-	// isWitness := true
 
 	err := tm.TestRpcClient.WalletPassphrase("pass", 60)
 	if err != nil {
