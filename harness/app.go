@@ -55,11 +55,9 @@ func startHarness(ctx context.Context) error {
 
 	gen := NewBTCHeaderGenerator(tm, headerSender)
 	gen.Start(ctx)
-	defer gen.Stop()
 
 	vig := NewSubReporter(tm, vigilanteSender)
 	vig.Start(ctx)
-	defer vig.Stop()
 
 	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 3, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
@@ -89,7 +87,6 @@ func startHarness(ctx context.Context) error {
 		if err := staker.Start(ctx); err != nil {
 			return err
 		}
-		defer staker.Stop()
 	}
 
 	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
@@ -102,7 +99,6 @@ func startHarness(ctx context.Context) error {
 	}
 
 	covenant.Start(ctx)
-	defer covenant.Stop()
 
 	// start voting
 	fpMgr.Start(ctx)

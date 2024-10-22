@@ -3,7 +3,6 @@ package harness
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -13,8 +12,6 @@ import (
 type BTCHeaderGenerator struct {
 	tm     *TestManager
 	client *SenderWithBabylonClient
-	wg     *sync.WaitGroup
-	quit   chan struct{}
 }
 
 func NewBTCHeaderGenerator(
@@ -23,8 +20,6 @@ func NewBTCHeaderGenerator(
 	return &BTCHeaderGenerator{
 		tm:     tm,
 		client: client,
-		wg:     &sync.WaitGroup{},
-		quit:   make(chan struct{}),
 	}
 }
 
@@ -65,18 +60,10 @@ func (g *BTCHeaderGenerator) Start(ctx context.Context) {
 	if err := g.CatchUpBTCLightClient(ctx); err != nil {
 		fmt.Printf("🚫: err catchup light client %v\n", err)
 	}
-	g.wg.Add(1)
 	go g.runForever(ctx)
 }
 
-func (g *BTCHeaderGenerator) Stop() {
-	close(g.quit)
-	//g.wg.Wait()
-}
-
 func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
-	defer g.wg.Done()
-
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 

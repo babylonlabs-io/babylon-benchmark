@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/babylonlabs-io/babylon/btctxformatter"
@@ -20,8 +19,6 @@ import (
 type SubReporter struct {
 	tm     *TestManager
 	client *SenderWithBabylonClient
-	wg     *sync.WaitGroup
-	quit   chan struct{}
 }
 
 func NewSubReporter(
@@ -31,24 +28,14 @@ func NewSubReporter(
 	return &SubReporter{
 		tm:     tm,
 		client: client,
-		wg:     &sync.WaitGroup{},
-		quit:   make(chan struct{}),
 	}
 }
 
 func (s *SubReporter) Start(ctx context.Context) {
-	s.wg.Add(1)
 	go s.runForever(ctx)
 }
 
-func (s *SubReporter) Stop() {
-	close(s.quit)
-	//s.wg.Wait()
-}
-
 func (s *SubReporter) runForever(ctx context.Context) {
-	defer s.wg.Done()
-
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -140,7 +127,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 		return err
 	}
 
-	proofs := s.waitFor2TransactionsConfirmation(hash1, hash2, 2)
+	proofs := s.waitFor2TransactionsConfirmation(ctx, hash1, hash2, 2)
 
 	if len(proofs) == 0 {
 		// we are quiting
@@ -166,6 +153,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 }
 
 func (s *SubReporter) waitFor2TransactionsConfirmation(
+	ctx context.Context,
 	txHash *chainhash.Hash,
 	txHash2 *chainhash.Hash,
 	requiredDepth uint32,
@@ -185,7 +173,7 @@ func (s *SubReporter) waitFor2TransactionsConfirmation(
 			if proof != nil {
 				return proof
 			}
-		case <-s.quit:
+		case <-ctx.Done():
 			return nil
 		}
 	}

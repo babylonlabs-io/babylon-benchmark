@@ -3,7 +3,6 @@ package harness
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	staking "github.com/babylonlabs-io/babylon/btcstaking"
@@ -21,8 +20,6 @@ type CovenantEmulator struct {
 	tm     *TestManager
 	client *SenderWithBabylonClient
 	covKey *btcec.PrivateKey
-	wg     *sync.WaitGroup
-	quit   chan struct{}
 }
 
 func NewCovenantEmulator(
@@ -34,23 +31,14 @@ func NewCovenantEmulator(
 		tm:     tm,
 		client: client,
 		covKey: covKey,
-		wg:     &sync.WaitGroup{},
-		quit:   make(chan struct{}),
 	}
 }
 
 func (c *CovenantEmulator) Start(ctx context.Context) {
-	c.wg.Add(1)
 	go c.runForever(ctx)
 }
 
-func (c *CovenantEmulator) Stop() {
-	close(c.quit)
-}
-
 func (c *CovenantEmulator) runForever(ctx context.Context) {
-	defer c.wg.Done()
-
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 

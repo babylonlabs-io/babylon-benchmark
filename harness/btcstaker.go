@@ -23,7 +23,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"sync"
 	"time"
 )
 
@@ -31,8 +30,6 @@ type BTCStaker struct {
 	tm     *TestManager
 	client *SenderWithBabylonClient
 	fpPK   *btcec.PublicKey
-	wg     *sync.WaitGroup
-	quit   chan struct{}
 }
 
 func NewBTCStaker(
@@ -44,8 +41,6 @@ func NewBTCStaker(
 		tm:     tm,
 		client: client,
 		fpPK:   finalityProviderPublicKey,
-		wg:     &sync.WaitGroup{},
-		quit:   make(chan struct{}),
 	}
 }
 
@@ -68,20 +63,13 @@ func (s *BTCStaker) Start(ctx context.Context) error {
 		return err
 	}
 
-	s.wg.Add(1)
 	go s.runForever(ctx, stakerAddress, pk)
 
 	return nil
 }
 
-func (s *BTCStaker) Stop() {
-	close(s.quit)
-}
-
 // infinite loop to constantly send delegations
 func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
-	defer s.wg.Done()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -296,6 +284,7 @@ func (s *BTCStaker) SignOneInputTaprootSpendingTransaction(
 }
 
 func (s *BTCStaker) waitForTransactionConfirmation(
+	ctx context.Context,
 	txHash *chainhash.Hash,
 	requiredDepth uint32,
 ) *bstypes.InclusionProof {
@@ -313,7 +302,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 			if proof != nil {
 				return proof
 			}
-		case <-s.quit:
+		case <-ctx.Done():
 			return nil
 		}
 
@@ -388,7 +377,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	fmt.Printf("send staking tx with hash %s \n", hash)
 
 	// TODO: hardcoded two in tests
-	inclusionProof := s.waitForTransactionConfirmation(hash, 2)
+	inclusionProof := s.waitForTransactionConfirmation(ctx, hash, 2)
 
 	if inclusionProof == nil {
 		// we are quiting
