@@ -162,18 +162,21 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 				fmt.Printf("🚫: err %v\n", err)
 				continue
 			}
+			// todo(lazar): vote in a goroutine
 			for _, fp := range fpm.finalityProviders {
-				hasVp, err := fp.hasVotingPower(ctx, tipBlock)
-				if err != nil {
-					fmt.Printf("err getting voting power %v\n", err)
-				}
-				if !hasVp {
-					continue
-				}
+				go func() {
+					hasVp, err := fp.hasVotingPower(ctx, tipBlock)
+					if err != nil {
+						fmt.Printf("🚫: err getting voting power %v\n", err)
+					}
+					if !hasVp {
+						return
+					}
 
-				if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
-					fmt.Printf("err submitting fin signature %v\n", err)
-				}
+					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
+						fmt.Printf("🚫: err submitting fin signature %v\n", err)
+					}
+				}()
 			}
 		case <-ctx.Done():
 			return
