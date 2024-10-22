@@ -90,7 +90,7 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 		default:
 			paramsResp, err := s.client.BTCStakingParams()
 			if err != nil {
-				panic(err)
+				fmt.Printf("🚫: err getting staking params %v\n", err)
 			}
 			_ = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 		}
@@ -309,7 +309,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 		case <-t.C:
 			proof, err := s.buildInclusion(txHash, requiredDepth)
 			if err != nil {
-				panic(err)
+				fmt.Printf("🚫: err building proof %v\n", err)
 			}
 			if proof != nil {
 				return proof

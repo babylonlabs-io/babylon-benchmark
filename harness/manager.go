@@ -175,7 +175,7 @@ func (tm *TestManager) Stop() {
 		fmt.Printf("err stopping client %v", err)
 	}
 	if err := tm.manger.ClearResources(); err != nil {
-		fmt.Printf("err clearning docker resource %v", err)
+		fmt.Printf("🚫: err clearning docker resource %v\n", err)
 	}
 
 	tm.BitcoindHandler.Stop()

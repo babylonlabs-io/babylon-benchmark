@@ -61,7 +61,7 @@ func (c *CovenanEmulator) runForever(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := c.sendMsgsWithSig(ctx); err != nil {
-				fmt.Printf("err sending cov msgs %v", err)
+				fmt.Printf("🚫: err sending cov msgs %v\n", err)
 			}
 		}
 	}

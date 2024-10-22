@@ -172,7 +172,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 			tipBlock, err := fpm.getLatestBlockWithRetry(ctx)
 
 			if err != nil {
-				fmt.Printf("err %v\n", err)
+				fmt.Printf("🚫: err %v\n", err)
 				continue
 			}
 			for _, fp := range fpm.finalityProviders {
@@ -562,4 +562,10 @@ func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *Bloc
 	}
 
 	return true, nil
+}
+
+func (fpm *FinalityProviderManager) randomFp() *FinalityProviderInstance {
+	randomIndex := r.Intn(len(fpm.finalityProviders))
+
+	return fpm.finalityProviders[randomIndex]
 }

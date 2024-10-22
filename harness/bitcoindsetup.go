@@ -53,7 +53,7 @@ func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (
 		_, err := h.GetBlockCount(ctx)
 
 		if err != nil {
-			fmt.Printf("failed to get block count: %v", err)
+			fmt.Printf("🚫: failed to get block count: %v\n", err)
 			return false
 		}
 		return err == nil

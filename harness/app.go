@@ -67,16 +67,10 @@ func startHarness(ctx context.Context) error {
 	vig.Start(ctx)
 	defer vig.Stop()
 
-	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 2, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
+	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 3, fpMgrHome, eotsDir, keyDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
-
-	//fpResp, fpInfo, err := cpSender.CreateFinalityProvider(ctx)
-	//if err != nil {
-	//	return err
-	//}
-	//fmt.Println(fpResp)
 
 	numStakers := 50
 
@@ -86,8 +80,7 @@ func startHarness(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		staker := NewBTCStaker(tm, stakerSender, fpMgr.finalityProviders[0].btcPk.MustToBTCPK()) // todo(lazar): choose fp rand
-		stakers = append(stakers, staker)
+		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK()))
 	}
 
 	// fund all stakers
@@ -117,6 +110,7 @@ func startHarness(ctx context.Context) error {
 	covenant.Start(ctx)
 	defer covenant.Stop()
 
+	// start voting
 	fpMgr.Start(ctx)
 
 	<-ctx.Done()

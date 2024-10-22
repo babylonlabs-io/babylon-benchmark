@@ -61,7 +61,7 @@ func (s *SubReporter) runForever(ctx context.Context) {
 			resp, err := s.client.RawCheckpointList(checkpointingtypes.Sealed, nil)
 
 			if err != nil {
-				fmt.Printf("failed to get checkpoints %s\n", err)
+				fmt.Printf("🚫: failed to get checkpoints %s\n", err)
 				continue
 			}
 
@@ -69,12 +69,12 @@ func (s *SubReporter) runForever(ctx context.Context) {
 				continue
 			}
 
-			firstSelead := resp.RawCheckpoints[0]
+			firstSealed := resp.RawCheckpoints[0]
 
-			fmt.Printf("retrieved checkpoint for epoch %d\n", firstSelead.Ckpt.EpochNum)
+			fmt.Printf("retrieved checkpoint for epoch %d\n", firstSealed.Ckpt.EpochNum)
 
-			if err = s.buildSendReportCheckpoint(ctx, firstSelead.Ckpt); err != nil {
-				fmt.Printf("err buildSendReportCheckpoint for epoch %d err:%v\n", firstSelead.Ckpt.EpochNum, err)
+			if err = s.buildSendReportCheckpoint(ctx, firstSealed.Ckpt); err != nil {
+				fmt.Printf("🚫: err buildSendReportCheckpoint for epoch %d err:%v\n", firstSealed.Ckpt.EpochNum, err)
 			}
 		}
 	}
@@ -179,7 +179,7 @@ func (s *SubReporter) waitFor2TransactionsConfirmation(
 		case <-t.C:
 			proof, err := s.buildSpvProof(txHash, txHash2, requiredDepth)
 			if err != nil {
-				panic(err)
+				fmt.Printf("🚫: err building proof %v\n", err)
 			}
 
 			if proof != nil {
