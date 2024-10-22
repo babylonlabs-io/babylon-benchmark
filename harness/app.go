@@ -117,6 +117,8 @@ func startHarness(ctx context.Context) error {
 	covenant.Start(ctx)
 	defer covenant.Stop()
 
+	fpMgr.Start(ctx)
+
 	<-ctx.Done()
 
 	return nil

@@ -38,6 +38,7 @@ type FinalityProviderManager struct {
 	wg                *sync.WaitGroup
 	logger            *zap.Logger
 	localEOTS         *eotsmanager.LocalEOTSManager
+	blockInfoChan     chan *BlockInfo
 
 	quit       chan struct{}
 	passphrase string
@@ -47,11 +48,12 @@ type FinalityProviderManager struct {
 	keyDir     string
 }
 type FinalityProviderInstance struct {
-	btcPk      *bbntypes.BIP340PubKey
-	proofStore *lib.PubRandProofStore
-	fpAddr     sdk.AccAddress
-	pop        *bstypes.ProofOfPossessionBTC
-	client     *SenderWithBabylonClient
+	btcPk               *bbntypes.BIP340PubKey
+	proofStore          *lib.PubRandProofStore
+	fpAddr              sdk.AccAddress
+	pop                 *bstypes.ProofOfPossessionBTC
+	client              *SenderWithBabylonClient
+	lastProcessedHeight uint64
 }
 
 func NewFinalityProviderManager(
@@ -64,20 +66,21 @@ func NewFinalityProviderManager(
 	keyDir string,
 ) *FinalityProviderManager {
 	return &FinalityProviderManager{
-		tm:      tm,
-		client:  client,
-		wg:      &sync.WaitGroup{},
-		logger:  logger,
-		fpCount: fpCount,
-		quit:    make(chan struct{}),
-		homeDir: homeDir,
-		eotsDb:  eotsDir,
-		keyDir:  keyDir,
+		tm:            tm,
+		client:        client,
+		wg:            &sync.WaitGroup{},
+		logger:        logger,
+		fpCount:       fpCount,
+		quit:          make(chan struct{}),
+		blockInfoChan: make(chan *BlockInfo, 1000),
+		homeDir:       homeDir,
+		eotsDb:        eotsDir,
+		keyDir:        keyDir,
 	}
 }
 
 func (fpm *FinalityProviderManager) Start(ctx context.Context) {
-	fpm.wg.Add(1)
+	go fpm.submitFinalitySigForever(ctx)
 }
 
 // Initialize creates finality provider instances and EOTS manager
@@ -144,12 +147,12 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	fpm.finalityProviders = fpis
 	fpm.localEOTS = eots
 
-	fmt.Printf("starting to commit randomness\n")
+	fmt.Printf("🎲: starting to commit randomness\n")
 	if err := fpm.commitRandomness(ctx); err != nil {
 		return err
 	}
 
-	fmt.Printf("waiting to be finalized\n")
+	fmt.Printf("⌛: waiting checkpoint to be finalized\n")
 	if err := fpm.waitUntilFinalized(ctx, res.CurrentEpoch); err != nil {
 		return err
 	}
@@ -157,45 +160,35 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (fpm *FinalityProviderManager) commitRandomnessForever(ctx context.Context) {
-	commitRandTicker := time.NewTicker(10 * time.Second)
-	defer commitRandTicker.Stop()
-
-	for {
-		select {
-		case <-commitRandTicker.C:
-			tipBlock, err := fpm.getLatestBlockWithRetry(ctx)
-			if err != nil {
-
-				continue
-			}
-			_ = tipBlock
-
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
 func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context) {
 	commitRandTicker := time.NewTicker(10 * time.Second)
 	defer commitRandTicker.Stop()
 
+	height := uint64(1)
 	for {
 		select {
 		case <-commitRandTicker.C:
+			//tipBlock, err := fpm.blockWithRetry(ctx, height)
 			tipBlock, err := fpm.getLatestBlockWithRetry(ctx)
-			if err != nil {
 
+			if err != nil {
+				fmt.Printf("err %v\n", err)
 				continue
 			}
 			for _, fp := range fpm.finalityProviders {
-				err := fpm.submitFinalitySignature(ctx, tipBlock, fp)
+				hasVp, err := fp.hasVotingPower(ctx, tipBlock)
 				if err != nil {
+					fmt.Printf("err getting voting power %v\n", err)
+				}
+				if !hasVp {
+					continue
+				}
+
+				if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
 					fmt.Printf("err submitting fin signature %v\n", err)
 				}
 			}
-
+			height++
 		case <-ctx.Done():
 			return
 		}
@@ -374,6 +367,28 @@ func (fpm *FinalityProviderManager) getLatestBlockWithRetry(ctx context.Context)
 	return latestBlock, nil
 }
 
+func (fpm *FinalityProviderManager) blockWithRetry(ctx context.Context, height uint64) (*BlockInfo, error) {
+	var (
+		block *BlockInfo
+	)
+	if err := retry.Do(func() error {
+		res, err := fpm.client.QueryClient.Block(height)
+		if err != nil {
+			return err
+		}
+		block = &BlockInfo{
+			Height:    height,
+			Hash:      res.Block.AppHash,
+			Finalized: res.Block.Finalized,
+		}
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.Context(ctx)); err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
 func (fpm *FinalityProviderManager) getPubRandList(startHeight uint64, numPubRand uint32, fpPk bbntypes.BIP340PubKey) ([]*btcec.FieldVal, error) {
 	pubRandList, err := fpm.localEOTS.CreateRandomnessPairList(
 		fpPk.MustMarshal(),
@@ -455,6 +470,10 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 		return err
 	}
 
+	fpi.lastProcessedHeight = b.Height
+
+	fmt.Printf("✍️: fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
+
 	return nil
 }
 
@@ -502,7 +521,6 @@ func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 }
 
 func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoch uint64) error {
-
 	err := lib.Eventually(ctx, func() bool {
 		lastFinalizedCkpt, err := fpm.tm.BabylonClient.LatestEpochFromStatus(ckpttypes.Finalized)
 		if err != nil {
@@ -513,4 +531,35 @@ func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoc
 	}, 120*time.Second, eventuallyPollTime, "err waiting for ckpt to be finalized")
 
 	return err
+}
+
+func (fpi *FinalityProviderInstance) getVotingPowerWithRetry(ctx context.Context, height uint64) (uint64, error) {
+	var power uint64
+
+	if err := retry.Do(func() error {
+		res, err := fpi.client.FinalityProviderPowerAtHeight(fpi.btcPk.MarshalHex(), height)
+		if err != nil {
+			return err
+		}
+
+		power = res.VotingPower
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.Context(ctx)); err != nil {
+		return 0, err
+	}
+
+	return power, nil
+}
+
+func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *BlockInfo) (bool, error) {
+	power, err := fpi.getVotingPowerWithRetry(ctx, b.Height)
+	if err != nil {
+		return false, err
+	}
+	if power == 0 {
+		fmt.Printf("🙁: the fp has no voting power %s block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
+		return false, nil
+	}
+
+	return true, nil
 }
