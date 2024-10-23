@@ -1,3 +1,23 @@
+# Help target
+help:
+	@echo "Available targets:"
+	@echo ""
+	@echo "  build                           Build the 'dgd' binary with the current settings."
+	@echo "  build-babylond                  Build the 'babylond' binary from the submodules."
+	@echo "  build-benchmark                 Build the benchmark environment, including 'babylond'."
+	@echo "  start-benchmark-from-snapshot   Start the benchmark environment from a snapshot."
+	@echo "  stop-benchmark                  Stop the benchmark environment and clean up data."
+	@echo "  run-dgd                         Run the 'dgd' binary to generate data."
+	@echo "  help                            Display this help message."
+	@echo ""
+	@echo "Variables:"
+	@echo "  BUILDDIR                        Directory where binaries are built (default: ./build)."
+	@echo "  build_tags                      Build tags for Go builds."
+	@echo "  build_args                      Additional build arguments."
+	@echo "  VERSION                         Git version used for the build."
+	@echo "  ldflags                         Linker flags for Go builds."
+	@echo ""
+
 DOCKER := $(shell which docker)
 GIT_TOPLEVEL := $(shell git rev-parse --show-toplevel)
 BUILDDIR ?= $(CURDIR)/build
@@ -40,4 +60,4 @@ $(BUILDDIR)/:
 run-dgd: build
 	@./build/dgd generate
 
-.PHONY: build
+.PHONY: build help
