@@ -460,7 +460,7 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 		return err
 	}
 
-	fmt.Printf("✍️ Fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
+	fmt.Printf("✍️ Fp %s, voted for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
 
 	fpi.lastVotedHeight = b.Height
 
@@ -547,7 +547,7 @@ func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *Bloc
 		return false, err
 	}
 	if power == 0 {
-		fmt.Printf("🙁 Fp has no voting power %s block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
+		fmt.Printf("🙁 Fp %s, has no voting power block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
 		return false, nil
 	}
 
