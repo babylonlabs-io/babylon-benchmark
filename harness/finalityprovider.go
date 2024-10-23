@@ -21,6 +21,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+	"sync"
 	"time"
 )
 
@@ -40,6 +41,7 @@ type FinalityProviderManager struct {
 	fpCount           int
 	homeDir           string
 	eotsDb            string
+	mu                sync.Mutex
 }
 type FinalityProviderInstance struct {
 	btcPk           *bbntypes.BIP340PubKey
@@ -48,6 +50,7 @@ type FinalityProviderInstance struct {
 	pop             *bstypes.ProofOfPossessionBTC
 	client          *SenderWithBabylonClient
 	lastVotedHeight uint64
+	mu              sync.Mutex
 }
 
 func NewFinalityProviderManager(
@@ -151,7 +154,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 }
 
 func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context) {
-	commitRandTicker := time.NewTicker(10 * time.Second)
+	commitRandTicker := time.NewTicker(3 * time.Second)
 	defer commitRandTicker.Stop()
 
 	for {
@@ -182,8 +185,12 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 						return
 					}
 
+					prevVoted := fp.lastVotedHeight
+					fp.lastVotedHeight = tipBlock.Height // optimistic
+
 					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
-						fmt.Printf("🚫 Err submitting fin signature %v\n", err)
+						fmt.Printf("🚫 Err submitting fin signature: %v\n", err)
+						fp.lastVotedHeight = prevVoted
 					}
 				}()
 			}
