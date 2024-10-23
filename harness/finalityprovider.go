@@ -584,7 +584,7 @@ func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Conte
 				continue
 			}
 
-			fmt.Printf("💡 Got finalized block: %d, finalized: %v\n", block.Height, block.Finalized)
+			fmt.Printf("💡 Got block: %d, finalized: %v\n", block.Height, block.Finalized)
 			height = block.Height + 1
 		}
 	}

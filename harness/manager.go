@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -305,4 +306,29 @@ func (tm *TestManager) fundAllParties(
 	}
 
 	return nil
+}
+
+func (tm *TestManager) listBlocksForever(ctx context.Context) {
+	lt := time.NewTicker(5 * time.Second)
+	defer lt.Stop()
+
+	for {
+		select {
+
+		case <-ctx.Done():
+			return
+		case <-lt.C:
+			resp, err := tm.BabylonClient.ListBlocks(finalitytypes.QueriedBlockStatus_NON_FINALIZED, nil)
+			if err != nil {
+				fmt.Printf("🚫 Failed to list blocks: %v\n", err)
+				continue
+			}
+
+			if len(resp.Blocks) == 0 {
+				continue
+			}
+
+			fmt.Printf("🔎 Found %d non-finalized block(s). Next block to finalize: %d\n", len(resp.Blocks), resp.Blocks[0].Height)
+		}
+	}
 }

@@ -111,6 +111,8 @@ func startHarness(ctx context.Context) error {
 	// start voting
 	fpMgr.Start(ctx)
 
+	go tm.listBlocksForever(ctx)
+
 	<-ctx.Done()
 
 	return nil
