@@ -21,7 +21,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"sync"
 	"time"
 )
 
@@ -41,15 +40,14 @@ type FinalityProviderManager struct {
 	fpCount           int
 	homeDir           string
 	eotsDb            string
-	lastVotedHeight   uint64
-	mu                sync.RWMutex
 }
 type FinalityProviderInstance struct {
-	btcPk      *bbntypes.BIP340PubKey
-	proofStore *lib.PubRandProofStore
-	fpAddr     sdk.AccAddress
-	pop        *bstypes.ProofOfPossessionBTC
-	client     *SenderWithBabylonClient
+	btcPk           *bbntypes.BIP340PubKey
+	proofStore      *lib.PubRandProofStore
+	fpAddr          sdk.AccAddress
+	pop             *bstypes.ProofOfPossessionBTC
+	client          *SenderWithBabylonClient
+	lastVotedHeight uint64
 }
 
 func NewFinalityProviderManager(
@@ -159,14 +157,17 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 	for {
 		select {
 		case <-commitRandTicker.C:
-			//tipBlock, err := fpm.blockWithRetry(ctx, height)
-			tipBlock, err := fpm.getLatestBlockWithRetry(ctx)
+			tipBlock, err := fpm.getEarliestNonFinalizedBlock()
 
 			if err != nil {
 				fmt.Printf("🚫: err %v\n", err)
 				continue
 			}
-			// todo(lazar): vote in a goroutine
+
+			if tipBlock == nil {
+				continue
+			}
+
 			for _, fp := range fpm.finalityProviders {
 				go func() {
 					hasVp, err := fp.hasVotingPower(ctx, tipBlock)
@@ -177,10 +178,13 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 						return
 					}
 
+					if fp.lastVotedHeight >= tipBlock.Height {
+						return
+					}
+
 					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
 						fmt.Printf("🚫: err submitting fin signature %v\n", err)
 					}
-
 				}()
 			}
 		case <-ctx.Done():
@@ -451,9 +455,7 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 
 	fmt.Printf("✍️: fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
 
-	fpm.mu.Lock()
-	fpm.lastVotedHeight = b.Height
-	defer fpm.mu.Unlock()
+	fpi.lastVotedHeight = b.Height
 
 	return nil
 }
@@ -552,7 +554,7 @@ func (fpm *FinalityProviderManager) randomFp() *FinalityProviderInstance {
 }
 
 func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	fmt.Printf("⌛: waiting for activation\n")
@@ -598,4 +600,16 @@ func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint
 	}
 
 	return height, nil
+}
+
+func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlock() (*BlockInfo, error) {
+	blocks, err := fpm.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_NON_FINALIZED, false)
+	if err != nil {
+		return nil, err
+	}
+	if len(blocks) == 0 {
+		return nil, nil
+	}
+
+	return blocks[0], nil
 }
