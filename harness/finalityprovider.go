@@ -21,6 +21,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+	"sync"
 	"time"
 )
 
@@ -40,6 +41,8 @@ type FinalityProviderManager struct {
 	fpCount           int
 	homeDir           string
 	eotsDb            string
+	lastVotedHeight   uint64
+	mu                sync.RWMutex
 }
 type FinalityProviderInstance struct {
 	btcPk      *bbntypes.BIP340PubKey
@@ -177,6 +180,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
 						fmt.Printf("🚫: err submitting fin signature %v\n", err)
 					}
+
 				}()
 			}
 		case <-ctx.Done():
@@ -447,6 +451,10 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 
 	fmt.Printf("✍️: fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
 
+	fpm.mu.Lock()
+	fpm.lastVotedHeight = b.Height
+	defer fpm.mu.Unlock()
+
 	return nil
 }
 
@@ -547,7 +555,15 @@ func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Conte
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	height := uint64(1)
+	fmt.Printf("⌛: waiting for activation\n")
+	height, err := fpm.waitForActivation(ctx)
+	if err != nil {
+		fmt.Printf("🚫: err %v\n", err)
+		return
+	}
+
+	fmt.Printf("🔋: activated height %d\n", height)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -563,4 +579,23 @@ func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Conte
 			height = block.Height + 1
 		}
 	}
+}
+
+func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint64, error) {
+	var height uint64
+
+	err := lib.Eventually(ctx, func() bool {
+		res, err := fpm.client.ActivatedHeight()
+		if err != nil {
+			return false
+		}
+		height = res.Height
+		return height > 0
+	}, 120*time.Second, eventuallyPollTime)
+
+	if err != nil {
+		return 0, fmt.Errorf("err getting activated height err:%v\n", err)
+	}
+
+	return height, nil
 }
