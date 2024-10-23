@@ -48,7 +48,7 @@ func (c *CovenantEmulator) runForever(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := c.sendMsgsWithSig(ctx); err != nil {
-				fmt.Printf("🚫: err sending cov msgs %v\n", err)
+				fmt.Printf("🚫 Err sending cov msgs %v\n", err)
 			}
 		}
 	}
@@ -83,7 +83,8 @@ func (c *CovenantEmulator) sendMsgsWithSig(ctx context.Context) error {
 	if resp == nil {
 		return fmt.Errorf("err sending msgs in cov")
 	}
-	fmt.Printf("sent %d covenant messages for delegations\n", len(messages))
+
+	//fmt.Printf("sent %d covenant messages for delegations\n", len(messages))
 
 	return nil
 }

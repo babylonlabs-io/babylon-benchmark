@@ -5,6 +5,12 @@ import (
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"go.uber.org/zap"
+	"sync/atomic"
+	"time"
+)
+
+var (
+	delegationsSentCounter int32
 )
 
 func Run(ctx context.Context) error {
@@ -89,6 +95,8 @@ func startHarness(ctx context.Context) error {
 		}
 	}
 
+	go printStatsForever(ctx)
+
 	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err
@@ -106,4 +114,25 @@ func startHarness(ctx context.Context) error {
 	<-ctx.Done()
 
 	return nil
+}
+
+func printStatsForever(ctx context.Context) {
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
+
+	prevSent := int32(0)
+	for {
+		select {
+		case <-t.C:
+			if atomic.LoadInt32(&delegationsSentCounter) == 0 || atomic.LoadInt32(&delegationsSentCounter) == prevSent {
+				continue
+			}
+
+			fmt.Printf("📄 Delegations sent: %d\n", atomic.LoadInt32(&delegationsSentCounter))
+			prevSent = atomic.LoadInt32(&delegationsSentCounter)
+		case <-ctx.Done():
+			return
+		}
+
+	}
 }

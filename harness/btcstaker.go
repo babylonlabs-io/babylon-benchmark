@@ -23,6 +23,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"sync/atomic"
 	"time"
 )
 
@@ -77,7 +78,7 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 		default:
 			paramsResp, err := s.client.BTCStakingParams()
 			if err != nil {
-				fmt.Printf("🚫: err getting staking params %v\n", err)
+				fmt.Printf("🚫 Err getting staking params %v\n", err)
 			}
 			_ = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 		}
@@ -288,7 +289,6 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 	txHash *chainhash.Hash,
 	requiredDepth uint32,
 ) *bstypes.InclusionProof {
-
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
@@ -297,7 +297,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 		case <-t.C:
 			proof, err := s.buildInclusion(txHash, requiredDepth)
 			if err != nil {
-				fmt.Printf("🚫: err building proof %v\n", err)
+				fmt.Printf("🚫 Err building proof %v\n", err)
 			}
 			if proof != nil {
 				return proof
@@ -305,7 +305,6 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 		case <-ctx.Done():
 			return nil
 		}
-
 	}
 }
 
@@ -374,7 +373,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	if err != nil {
 		return err
 	}
-	fmt.Printf("send staking tx with hash %s \n", hash)
+	//fmt.Printf("send staking tx with hash %s \n", hash)
 
 	// TODO: hardcoded two in tests
 	inclusionProof := s.waitForTransactionConfirmation(ctx, hash, 2)
@@ -384,7 +383,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		return fmt.Errorf("empty inclusion proof")
 	}
 
-	fmt.Printf("staking tx confirmed with hash %s \n", hash)
+	//fmt.Printf("staking tx confirmed with hash %s \n", hash)
 
 	unbondingTxValue := params.MinStakingValueSat - params.UnbondingFeeSat
 
@@ -525,7 +524,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		return fmt.Errorf("resp from send msg is nil %v", msgBTCDel)
 	}
 
-	fmt.Printf("Delegation sent for transaction with hash %s\n", hash)
+	atomic.AddInt32(&delegationsSentCounter, 1)
 
 	return nil
 }

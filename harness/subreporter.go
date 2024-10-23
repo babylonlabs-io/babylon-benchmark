@@ -48,7 +48,7 @@ func (s *SubReporter) runForever(ctx context.Context) {
 			resp, err := s.client.RawCheckpointList(checkpointingtypes.Sealed, nil)
 
 			if err != nil {
-				fmt.Printf("🚫: failed to get checkpoints %s\n", err)
+				fmt.Printf("🚫 Failed to get checkpoints %s\n", err)
 				continue
 			}
 
@@ -58,10 +58,10 @@ func (s *SubReporter) runForever(ctx context.Context) {
 
 			firstSealed := resp.RawCheckpoints[0]
 
-			fmt.Printf("retrieved checkpoint for epoch %d\n", firstSealed.Ckpt.EpochNum)
+			fmt.Printf("📌 retrieved checkpoint for epoch %d\n", firstSealed.Ckpt.EpochNum)
 
 			if err = s.buildSendReportCheckpoint(ctx, firstSealed.Ckpt); err != nil {
-				fmt.Printf("🚫: err buildSendReportCheckpoint for epoch %d err:%v\n", firstSealed.Ckpt.EpochNum, err)
+				fmt.Printf("🚫 Err buildSendReportCheckpoint for epoch %d err:%v\n", firstSealed.Ckpt.EpochNum, err)
 			}
 		}
 	}
@@ -134,7 +134,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 		return fmt.Errorf("no proofs")
 	}
 
-	fmt.Printf("sending checkpoint for epoch %d with proof %d \n", ckpt.EpochNum, len(proofs))
+	fmt.Printf("📌 Sending checkpoint for epoch %d with proof %d \n", ckpt.EpochNum, len(proofs))
 
 	msg := &btckpttypes.MsgInsertBTCSpvProof{
 		Submitter: s.client.BabylonAddress.String(),
@@ -167,7 +167,7 @@ func (s *SubReporter) waitFor2TransactionsConfirmation(
 		case <-t.C:
 			proof, err := s.buildSpvProof(txHash, txHash2, requiredDepth)
 			if err != nil {
-				fmt.Printf("🚫: err building proof %v\n", err)
+				fmt.Printf("🚫 Err building proof %v\n", err)
 			}
 
 			if proof != nil {

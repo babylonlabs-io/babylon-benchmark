@@ -58,7 +58,7 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 
 func (g *BTCHeaderGenerator) Start(ctx context.Context) {
 	if err := g.CatchUpBTCLightClient(ctx); err != nil {
-		fmt.Printf("🚫: err catchup light client %v\n", err)
+		fmt.Printf("🚫 err catchup light client %v\n", err)
 	}
 	go g.runForever(ctx)
 }
@@ -103,7 +103,7 @@ func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 	}
 	btclcHeight := tipResp.Header.Height
 
-	fmt.Printf("🧱: Current best block height: %d, BTC light client height: %d\n", btcHeight, btclcHeight)
+	fmt.Printf("🧱 Current best block height: %d, BTC light client height: %d\n", btcHeight, btclcHeight)
 
 	return nil
 }

@@ -137,12 +137,12 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	fpm.finalityProviders = fpis
 	fpm.localEOTS = eots
 
-	fmt.Printf("🎲: starting to commit randomness\n")
+	fmt.Printf("🎲 Starting to commit randomness\n")
 	if err := fpm.commitRandomness(ctx); err != nil {
 		return err
 	}
 
-	fmt.Printf("⌛: waiting checkpoint to be finalized\n")
+	fmt.Printf("⌛ Waiting checkpoint to be finalized\n")
 	if err := fpm.waitUntilFinalized(ctx, res.CurrentEpoch); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 			tipBlock, err := fpm.getEarliestNonFinalizedBlock()
 
 			if err != nil {
-				fmt.Printf("🚫: err %v\n", err)
+				fmt.Printf("🚫 Err %v\n", err)
 				continue
 			}
 
@@ -172,7 +172,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 				go func() {
 					hasVp, err := fp.hasVotingPower(ctx, tipBlock)
 					if err != nil {
-						fmt.Printf("🚫: err getting voting power %v\n", err)
+						fmt.Printf("🚫 Err getting voting power %v\n", err)
 					}
 					if !hasVp {
 						return
@@ -183,7 +183,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 					}
 
 					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
-						fmt.Printf("🚫: err submitting fin signature %v\n", err)
+						fmt.Printf("🚫 Err submitting fin signature %v\n", err)
 					}
 				}()
 			}
@@ -453,7 +453,7 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 		return err
 	}
 
-	fmt.Printf("✍️: fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
+	fmt.Printf("✍️ Fp voted %s for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
 
 	fpi.lastVotedHeight = b.Height
 
@@ -540,7 +540,7 @@ func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *Bloc
 		return false, err
 	}
 	if power == 0 {
-		fmt.Printf("🙁: the fp has no voting power %s block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
+		fmt.Printf("🙁 Fp has no voting power %s block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
 		return false, nil
 	}
 
@@ -557,14 +557,14 @@ func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Conte
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
-	fmt.Printf("⌛: waiting for activation\n")
+	fmt.Printf("⌛ Waiting for activation\n")
 	height, err := fpm.waitForActivation(ctx)
 	if err != nil {
-		fmt.Printf("🚫: err %v\n", err)
+		fmt.Printf("🚫 Err %v\n", err)
 		return
 	}
 
-	fmt.Printf("🔋: activated height %d\n", height)
+	fmt.Printf("🔋 Activated height %d\n", height)
 
 	for {
 		select {
@@ -573,11 +573,11 @@ func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Conte
 		case <-ticker.C:
 			block, err := fpm.blockWithRetry(ctx, height)
 			if err != nil {
-				fmt.Printf("🚫: err getting block from bbn at height %d err: %v\n", height, err)
+				fmt.Printf("🚫 Err getting block from bbn at height %d err: %v\n", height, err)
 				continue
 			}
 
-			fmt.Printf("💡: got finalized block: %d, finalized: %v\n", block.Height, block.Finalized)
+			fmt.Printf("💡 Got finalized block: %d, finalized: %v\n", block.Height, block.Finalized)
 			height = block.Height + 1
 		}
 	}
