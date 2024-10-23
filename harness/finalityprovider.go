@@ -21,7 +21,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"sync"
 	"time"
 )
 
@@ -41,7 +40,6 @@ type FinalityProviderManager struct {
 	fpCount           int
 	homeDir           string
 	eotsDb            string
-	mu                sync.Mutex
 }
 type FinalityProviderInstance struct {
 	btcPk           *bbntypes.BIP340PubKey
@@ -50,7 +48,6 @@ type FinalityProviderInstance struct {
 	pop             *bstypes.ProofOfPossessionBTC
 	client          *SenderWithBabylonClient
 	lastVotedHeight uint64
-	mu              sync.Mutex
 }
 
 func NewFinalityProviderManager(
@@ -304,56 +301,6 @@ func (fpm *FinalityProviderManager) queryLatestBlocks(startKey []byte, count uin
 	}
 
 	return blocks, nil
-}
-
-func (fpm *FinalityProviderManager) queryCometBestBlock(ctx context.Context) (*BlockInfo, error) {
-	innerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := fpm.client.RPCClient.BlockchainInfo(innerCtx, 0, 0)
-	defer cancel()
-
-	if err != nil {
-		return nil, err
-	}
-
-	headerHeightInt64 := chainInfo.BlockMetas[0].Header.Height
-	if headerHeightInt64 < 0 {
-		return nil, fmt.Errorf("block height %v should be positive", headerHeightInt64)
-	}
-	// Returning response directly, if header with specified number did not exist
-	// at request will contain nil header
-	return &BlockInfo{
-		Height: uint64(headerHeightInt64),
-		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
-	}, nil
-}
-
-func (fpm *FinalityProviderManager) queryBestBlock(ctx context.Context) (*BlockInfo, error) {
-	blocks, err := fpm.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_ANY, true)
-	if err != nil || len(blocks) != 1 {
-		return fpm.queryCometBestBlock(ctx)
-	}
-
-	return blocks[0], nil
-}
-
-func (fpm *FinalityProviderManager) getLatestBlockWithRetry(ctx context.Context) (*BlockInfo, error) {
-	var (
-		latestBlock *BlockInfo
-		err         error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlock, err = fpm.queryBestBlock(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
-	}, RtyAtt, RtyDel, RtyErr); err != nil {
-		return nil, err
-	}
-
-	return latestBlock, nil
 }
 
 func (fpm *FinalityProviderManager) blockWithRetry(ctx context.Context, height uint64) (*BlockInfo, error) {

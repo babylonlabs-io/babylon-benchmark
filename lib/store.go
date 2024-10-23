@@ -71,12 +71,11 @@ func (s *PubRandProofStore) AddPubRandProofList(
 // GetPubRandProof retrieves a proof for the given pubRand from the in-memory store
 func (s *PubRandProofStore) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, error) {
 	pubRandBytes := pubRand.Bytes()
-	pubRandKey := string(pubRandBytes[:])
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	proofBytes, exists := s.proofStore[pubRandKey]
+	proofBytes, exists := s.proofStore[string(pubRandBytes[:])]
 	if !exists {
 		return nil, fmt.Errorf("pubRand proof not found")
 	}
@@ -92,9 +91,8 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 	var proofBytesList [][]byte
 	for _, pubRand := range pubRandList {
 		pubRandBytes := pubRand.Bytes()
-		pubRandKey := string(pubRandBytes[:])
 
-		proofBytes, exists := s.proofStore[pubRandKey]
+		proofBytes, exists := s.proofStore[string(pubRandBytes[:])]
 		if !exists {
 			return nil, fmt.Errorf("pubRand proof not found for one or more pubRands")
 		}
