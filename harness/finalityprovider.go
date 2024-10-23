@@ -69,6 +69,7 @@ func NewFinalityProviderManager(
 
 func (fpm *FinalityProviderManager) Start(ctx context.Context) {
 	go fpm.submitFinalitySigForever(ctx)
+	go fpm.queryFinalizedBlockForever(ctx)
 }
 
 // Initialize creates finality provider instances and EOTS manager
@@ -540,4 +541,26 @@ func (fpm *FinalityProviderManager) randomFp() *FinalityProviderInstance {
 	randomIndex := r.Intn(len(fpm.finalityProviders))
 
 	return fpm.finalityProviders[randomIndex]
+}
+
+func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	height := uint64(1)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			block, err := fpm.blockWithRetry(ctx, height)
+			if err != nil {
+				fmt.Printf("🚫: err getting block from bbn at height %d err: %v\n", height, err)
+				continue
+			}
+
+			fmt.Printf("💡: got finalized block: %d, finalized: %v\n", block.Height, block.Finalized)
+			height = block.Height + 1
+		}
+	}
 }
