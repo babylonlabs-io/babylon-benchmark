@@ -29,12 +29,15 @@ stop-benchmark:
 	rm -rf $(CURDIR)/babylond_data_follower
 
 
-build: BUILD_ARGS := $(build_args) -o $(BUILDDIR)
+build: BUILD_ARGS := $(build_args) -o $(BUILDDIR)/dgd
 
 $(BUILD_TARGETS): go.sum $(BUILDDIR)/
-	go $@ -mod=readonly $(BUILD_FLAGS) $(BUILD_ARGS) ./...
+	go $@ -mod=readonly $(BUILD_FLAGS) $(BUILD_ARGS) ./cmd/datagen
 
 $(BUILDDIR)/:
 	mkdir -p $(BUILDDIR)/
+
+run-dgd: build
+	@./build/dgd generate
 
 .PHONY: build
