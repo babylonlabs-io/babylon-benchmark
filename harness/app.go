@@ -18,7 +18,10 @@ func Run(ctx context.Context) error {
 }
 
 func startHarness(ctx context.Context) error {
-	numMatureOutputs := uint32(500)
+	const numStakers = 50
+	const numFinalityProviders = 3
+	const numMatureOutputs = uint32(500)
+
 	tm, err := StartManager(ctx, numMatureOutputs, 5)
 	if err != nil {
 		return err
@@ -65,16 +68,14 @@ func startHarness(ctx context.Context) error {
 	vig := NewSubReporter(tm, vigilanteSender)
 	vig.Start(ctx)
 
-	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), 3, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
+	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), numFinalityProviders, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
 	if err = fpMgr.Initialize(ctx); err != nil {
 		return err
 	}
 
-	numStakers := 50
-
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 		if err != nil {
 			return err
 		}
@@ -108,7 +109,7 @@ func startHarness(ctx context.Context) error {
 
 	covenant.Start(ctx)
 
-	// start voting
+	// finality providers start voting
 	fpMgr.Start(ctx)
 
 	go tm.listBlocksForever(ctx)

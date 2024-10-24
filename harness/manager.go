@@ -61,10 +61,10 @@ type TestManager struct {
 	WalletPrivKey   *btcec.PrivateKey
 	manger          *container.Manager
 	mu              sync.Mutex
+	babylonDir      string
 }
 
 // StartManager creates a test manager
-// NOTE: uses btc client with zmq
 func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInterval uint) (*TestManager, error) {
 	manager, err := container.NewManager()
 	if err != nil {
@@ -126,18 +126,18 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	}
 
 	// start Babylon node
-	tmpDir, err := tempDir()
+	babylonDir, err := tempDir()
 	if err != nil {
 		return nil, err
 	}
 
-	babylond, err := manager.RunBabylondResource("main", tmpDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
+	babylond, err := manager.RunBabylondResource("main", babylonDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
 	if err != nil {
 		return nil, err
 	}
 
-	// create Babylon client
-	cfg.Babylon.KeyDirectory = filepath.Join(tmpDir, "node0", "babylond")
+	// create a Babylon client
+	cfg.Babylon.KeyDirectory = filepath.Join(babylonDir, "node0", "babylond")
 	cfg.Babylon.Key = "test-spending-key" // keyring to bbn node
 	cfg.Babylon.GasAdjustment = 3.0
 
@@ -167,19 +167,23 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 		Config:          cfg,
 		WalletPrivKey:   walletPrivKey,
 		manger:          manager,
+		babylonDir:      babylonDir,
 	}, nil
 }
 
 func (tm *TestManager) Stop() {
 	if tm.BabylonClient.IsRunning() {
 		err := tm.BabylonClient.Stop()
-		fmt.Printf("err stopping client %v", err)
+		fmt.Printf("🚫 Rrr stopping client %v\n", err)
 	}
+
 	if err := tm.manger.ClearResources(); err != nil {
 		fmt.Printf("🚫 Err clearning docker resource %v\n", err)
 	}
 
 	tm.BitcoindHandler.Stop()
+
+	cleanupDir(tm.babylonDir)
 }
 
 func importPrivateKey(ctx context.Context, btcHandler *BitcoindTestHandler) (*btcec.PrivateKey, error) {

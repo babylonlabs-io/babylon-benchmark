@@ -84,13 +84,13 @@ func (h *BitcoindTestHandler) GetBlockCount(ctx context.Context) (int, error) {
 func (h *BitcoindTestHandler) GenerateBlocks(ctx context.Context, count int) *GenerateBlockResponse {
 	buff, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"-generate", fmt.Sprintf("%d", count)})
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err gen blocks resp: %v\n", err)
 	}
 
 	var response GenerateBlockResponse
 	err = json.Unmarshal(buff.Bytes(), &response)
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err unmarshal block resp: %v\n", err)
 	}
 
 	return &response
@@ -101,13 +101,13 @@ func (h *BitcoindTestHandler) CreateWallet(ctx context.Context, walletName strin
 	// last arg is true which indicates we are using descriptor wallets they do not allow dumping private keys.
 	buff, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"createwallet", walletName, "false", "false", passphrase, "false", "true"})
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err create wallet: %v\n", err)
 	}
 
 	var response CreateWalletResponse
 	err = json.Unmarshal(buff.Bytes(), &response)
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err wallet resp: %v\n", err)
 	}
 
 	return &response
@@ -117,7 +117,7 @@ func (h *BitcoindTestHandler) CreateWallet(ctx context.Context, walletName strin
 func (h *BitcoindTestHandler) InvalidateBlock(ctx context.Context, blockHash string) {
 	_, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"invalidateblock", blockHash})
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err invalidate block: %v\n", err)
 	}
 }
 
@@ -125,7 +125,7 @@ func (h *BitcoindTestHandler) InvalidateBlock(ctx context.Context, blockHash str
 func (h *BitcoindTestHandler) ImportDescriptors(ctx context.Context, descriptor string) {
 	_, _, err := h.m.ExecBitcoindCliCmd(ctx, []string{"importdescriptors", descriptor})
 	if err != nil {
-		panic(err)
+		fmt.Printf("🚫 err import descriptors %v\n", err)
 	}
 }
 

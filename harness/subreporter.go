@@ -59,7 +59,6 @@ func (s *SubReporter) runForever(ctx context.Context) {
 			firstSealed := resp.RawCheckpoints[0]
 
 			fmt.Printf("📌 Retrieved checkpoint for epoch %d\n", firstSealed.Ckpt.EpochNum)
-
 			if err = s.buildSendReportCheckpoint(ctx, firstSealed.Ckpt); err != nil {
 				fmt.Printf("🚫 Err buildSendReportCheckpoint for epoch %d err:%v\n", firstSealed.Ckpt.EpochNum, err)
 			}
