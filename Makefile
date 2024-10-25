@@ -58,6 +58,6 @@ $(BUILDDIR)/:
 	mkdir -p $(BUILDDIR)/
 
 run-dgd: build
-	@./build/dgd generate
+	@./build/dgd generate --total-fps 5 --total-stakers 150
 
 .PHONY: build help

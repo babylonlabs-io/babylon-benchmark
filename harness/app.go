@@ -30,6 +30,9 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 	}
 	defer tm.Stop()
 
+	// bold text
+	fmt.Printf("🟢 Starting with \033[1m%d\033[0m stakers, \u001B[1m%d\u001B[0m finality providers.\n", numStakers, numFinalityProviders)
+
 	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
 		return err

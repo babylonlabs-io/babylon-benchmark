@@ -21,7 +21,7 @@ func CommandGenerate() *cobra.Command {
 		Use:     "generate",
 		Aliases: []string{"g"},
 		Short:   "Generates delegations with configurable finality providers, stakers, and total delegations",
-		Example: `dgd generate --babylon-path /path/to/babylon --total-fp 5 --total-stakers 150 --total-delegations 500`,
+		Example: `dgd generate --babylon-path /path/to/babylon --total-fps 5 --total-stakers 150 --total-delegations 500`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerate,
 	}
