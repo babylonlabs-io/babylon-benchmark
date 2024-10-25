@@ -199,7 +199,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 
 func (fpm *FinalityProviderManager) commitRandomness(ctx context.Context) error {
 	startHeight := uint64(1) // todo(lazar): configure
-	npr := uint32(1000)
+	npr := uint32(150_000)
 	for _, fp := range fpm.finalityProviders {
 		pubRandList, err := fpm.getPubRandList(startHeight, npr, *fp.btcPk)
 		if err != nil {

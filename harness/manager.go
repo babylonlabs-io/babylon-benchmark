@@ -7,18 +7,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	benchcfg "github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	"github.com/cosmos/cosmos-sdk/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
-
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/babylonlabs-io/vigilante/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcjson"
@@ -28,6 +21,13 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
 )
 
 var (
@@ -62,10 +62,11 @@ type TestManager struct {
 	manger          *container.Manager
 	mu              sync.Mutex
 	babylonDir      string
+	benchConfig     benchcfg.Config
 }
 
 // StartManager creates a test manager
-func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInterval uint) (*TestManager, error) {
+func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uint, runCfg benchcfg.Config) (*TestManager, error) {
 	manager, err := container.NewManager()
 	if err != nil {
 		return nil, err
@@ -97,8 +98,7 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 		return nil, err
 	}
 
-	err = testRpcClient.WalletPassphrase(passphrase, 600)
-	if err != nil {
+	if err = testRpcClient.WalletPassphrase(passphrase, 600); err != nil {
 		return nil, err
 	}
 
@@ -106,7 +106,7 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	if err != nil {
 		return nil, err
 	}
-	blocksResponse := btcHandler.GenerateBlocks(ctx, int(numMatureOutputsInWallet))
+	blocksResponse := btcHandler.GenerateBlocks(ctx, int(outputsInWallet))
 
 	var buff bytes.Buffer
 	err = regtestParams.GenesisBlock.Header.Serialize(&buff)
@@ -129,6 +129,10 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 	babylonDir, err := tempDir()
 	if err != nil {
 		return nil, err
+	}
+
+	if runCfg.BabylonPath != "" {
+		babylonDir = runCfg.BabylonPath // override with cfg
 	}
 
 	babylond, err := manager.RunBabylondResource("main", babylonDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
@@ -168,6 +172,7 @@ func StartManager(ctx context.Context, numMatureOutputsInWallet uint32, epochInt
 		WalletPrivKey:   walletPrivKey,
 		manger:          manager,
 		babylonDir:      babylonDir,
+		benchConfig:     runCfg,
 	}, nil
 }
 
@@ -183,7 +188,9 @@ func (tm *TestManager) Stop() {
 
 	tm.BitcoindHandler.Stop()
 
-	cleanupDir(tm.babylonDir)
+	if tm.benchConfig.BabylonPath != "" {
+		cleanupDir(tm.babylonDir) // don't cleanup babylon if user specified a path
+	}
 }
 
 func importPrivateKey(ctx context.Context, btcHandler *BitcoindTestHandler) (*btcec.PrivateKey, error) {

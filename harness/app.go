@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"go.uber.org/zap"
 	"sync/atomic"
@@ -13,16 +14,17 @@ var (
 	delegationsSentCounter int32
 )
 
-func Run(ctx context.Context) error {
-	return startHarness(ctx)
+func Run(ctx context.Context, cfg config.Config) error {
+	return startHarness(ctx, cfg)
 }
 
-func startHarness(ctx context.Context) error {
-	const numStakers = 50
-	const numFinalityProviders = 3
+func startHarness(ctx context.Context, cfg config.Config) error {
+	numStakers := cfg.TotalStakers
+	numFinalityProviders := cfg.TotalFinalityProviders
 	const numMatureOutputs = uint32(500)
+	stopChan := make(chan struct{})
 
-	tm, err := StartManager(ctx, numMatureOutputs, 5)
+	tm, err := StartManager(ctx, numMatureOutputs, 5, cfg)
 	if err != nil {
 		return err
 	}
@@ -96,7 +98,7 @@ func startHarness(ctx context.Context) error {
 		}
 	}
 
-	go printStatsForever(ctx)
+	go printStatsForever(ctx, stopChan, cfg)
 
 	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
@@ -114,12 +116,16 @@ func startHarness(ctx context.Context) error {
 
 	go tm.listBlocksForever(ctx)
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case <-stopChan:
+		return nil
+	}
 
 	return nil
 }
 
-func printStatsForever(ctx context.Context) {
+func printStatsForever(ctx context.Context, stopChan chan struct{}, cfg config.Config) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 
@@ -129,6 +135,12 @@ func printStatsForever(ctx context.Context) {
 		case <-t.C:
 			if atomic.LoadInt32(&delegationsSentCounter) == 0 || atomic.LoadInt32(&delegationsSentCounter) == prevSent {
 				continue
+			}
+
+			if cfg.TotalDelegations != 0 && atomic.LoadInt32(&delegationsSentCounter) >= int32(cfg.TotalDelegations) {
+				// we could be a bit off, but let's not complicate things, avoid propagating chan deep
+				fmt.Printf("🟩 Reached desired total delegation %d, stopping the CLI...\n", atomic.LoadInt32(&delegationsSentCounter))
+				close(stopChan)
 			}
 
 			fmt.Printf("📄 Delegations sent: %d\n", atomic.LoadInt32(&delegationsSentCounter))
