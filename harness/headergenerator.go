@@ -62,24 +62,12 @@ func (g *BTCHeaderGenerator) Start(ctx context.Context) {
 }
 
 func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
-	//t := time.NewTicker(5 * time.Second)
-	//defer t.Stop()
-	//
-	//for {
-	//	select {
-	//	case <-ctx.Done():
-	//		return
-	//	case <-t.C:
-	//		_ = g.genBlocks(ctx)
-	//	}
-	//}
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			_ = g.genBlocks(ctx) // Generate and insert blocks continuously
+			_ = g.genBlocks(ctx)
 		}
 	}
 }
