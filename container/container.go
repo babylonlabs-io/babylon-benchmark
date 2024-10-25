@@ -220,8 +220,9 @@ func (m *Manager) RunBabylondResource(
 		},
 		func(config *docker.HostConfig) {
 			config.PortBindings = map[docker.Port][]docker.PortBinding{
-				"9090/tcp":  {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort())}},
-				"26657/tcp": {{HostIP: "", HostPort: strconv.Itoa(AllocateUniquePort())}},
+				"9090/tcp":  {{HostIP: "", HostPort: "9090"}},
+				"26657/tcp": {{HostIP: "", HostPort: "26657"}},
+				"8080/tcp":  {{HostIP: "", HostPort: "8080"}},
 			}
 		},
 		noRestart,
