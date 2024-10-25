@@ -19,17 +19,17 @@ func CommandGenerate() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "generate",
 		Aliases: []string{"g"},
-		Short:   "Generates data #TBD all info.", // todo(lazar): more info here, args, config etc
-		Example: `dgd generate`,
+		Short:   "Generates delegations with configurable finality providers, stakers, and total delegations",
+		Example: `dgd generate --babylon-path /path/to/babylon --total-fp 5 --total-stakers 150 --total-delegations 500`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerate,
 	}
 
 	f := cmd.Flags()
 	f.String(babylonPathFlag, "", "Path to which babylond docker will mount (optional, tmp dir will be used as default)")
-	f.Int(totalFpFlag, 5, "Number of finality providers to run")
+	f.Int(totalFpFlag, 3, "Number of finality providers to run (optional)")
 	f.Int(totalDelegationsFlag, 0, "Number of delegations to run this cmd, after it we will exit. (optional, 0 for indefinite)")
-	f.Int(totalStakersFlag, 100, "Number of stakers to run")
+	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
 
 	return cmd
 }

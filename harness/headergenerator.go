@@ -3,8 +3,6 @@ package harness
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -64,15 +62,24 @@ func (g *BTCHeaderGenerator) Start(ctx context.Context) {
 }
 
 func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
-	t := time.NewTicker(5 * time.Second)
-	defer t.Stop()
+	//t := time.NewTicker(5 * time.Second)
+	//defer t.Stop()
+	//
+	//for {
+	//	select {
+	//	case <-ctx.Done():
+	//		return
+	//	case <-t.C:
+	//		_ = g.genBlocks(ctx)
+	//	}
+	//}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.C:
-			_ = g.genBlocks(ctx)
+		default:
+			_ = g.genBlocks(ctx) // Generate and insert blocks continuously
 		}
 	}
 }
