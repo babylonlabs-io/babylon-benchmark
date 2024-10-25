@@ -12,6 +12,7 @@ const (
 	totalStakersFlag     = "total-stakers"
 	babylonPathFlag      = "babylon-path"
 	totalDelegationsFlag = "total-delegations"
+	numPubRandFlag       = "num-public-randomness"
 )
 
 // CommandGenerate generates data
@@ -30,6 +31,7 @@ func CommandGenerate() *cobra.Command {
 	f.Int(totalFpFlag, 3, "Number of finality providers to run (optional)")
 	f.Int(totalDelegationsFlag, 0, "Number of delegations to run this cmd, after it we will exit. (optional, 0 for indefinite)")
 	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
+	f.Uint32(numPubRandFlag, 150_000, "Number of pub randomness to commit, should be a high value (optional)")
 
 	return cmd
 }
@@ -56,7 +58,13 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", totalStakersFlag, err)
 	}
 
+	numPubRand, err := flags.GetUint32(numPubRandFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", numPubRandFlag, err)
+	}
+
 	cfg := config.Config{
+		NumPubRand:             numPubRand,
 		TotalStakers:           totalStakers,
 		TotalFinalityProviders: totalFps,
 		TotalDelegations:       totalDelegations,

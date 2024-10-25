@@ -74,7 +74,7 @@ func (fpm *FinalityProviderManager) Start(ctx context.Context) {
 }
 
 // Initialize creates finality provider instances and EOTS manager
-func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
+func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand uint32) error {
 	db, err := lib.NewBackend(fpm.eotsDb)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context) error {
 	fpm.localEOTS = eots
 
 	fmt.Printf("🎲 Starting to commit randomness\n")
-	if err := fpm.commitRandomness(ctx); err != nil {
+	if err := fpm.commitRandomness(ctx, numPubRand); err != nil {
 		return err
 	}
 
@@ -197,9 +197,9 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 	}
 }
 
-func (fpm *FinalityProviderManager) commitRandomness(ctx context.Context) error {
+func (fpm *FinalityProviderManager) commitRandomness(ctx context.Context, numPubRand uint32) error {
 	startHeight := uint64(1) // todo(lazar): configure
-	npr := uint32(150_000)
+	npr := numPubRand
 	for _, fp := range fpm.finalityProviders {
 		pubRandList, err := fpm.getPubRandList(startHeight, npr, *fp.btcPk)
 		if err != nil {

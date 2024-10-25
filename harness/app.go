@@ -71,7 +71,7 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 	vig.Start(ctx)
 
 	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), numFinalityProviders, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
-	if err = fpMgr.Initialize(ctx); err != nil {
+	if err = fpMgr.Initialize(ctx, cfg.NumPubRand); err != nil {
 		return err
 	}
 
