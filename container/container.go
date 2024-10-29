@@ -3,13 +3,16 @@ package container
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
+	"github.com/docker/docker/api/types"
 	"regexp"
 	"strconv"
 	"time"
 
 	bbn "github.com/babylonlabs-io/babylon/types"
+	rawDc "github.com/docker/docker/client"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 
@@ -32,28 +35,36 @@ var errRegex = regexp.MustCompile(`(E|e)rror`)
 // Manager is a wrapper around all Docker instances, and the Docker API.
 // It provides utilities to run and interact with all Docker containers
 type Manager struct {
-	cfg       ImageConfig
-	pool      *dockertest.Pool
-	resources map[string]*dockertest.Resource
+	cfg         ImageConfig
+	pool        *dockertest.Pool
+	resources   map[string]*dockertest.Resource
+	rawDcClient *rawDc.Client
 }
 
 // NewManager creates a new Manager instance and initializes
 // all Docker specific utilities. Returns an error if initialization fails.
-func NewManager() (docker *Manager, err error) {
+func NewManager() (mgr *Manager, err error) {
 	imgCfg, err := NewImageConfig()
 	if err != nil {
 		return nil, err
 	}
-	docker = &Manager{
+	mgr = &Manager{
 		cfg:       *imgCfg,
 		resources: make(map[string]*dockertest.Resource),
 	}
-	docker.pool, err = dockertest.NewPool("")
+	mgr.pool, err = dockertest.NewPool("")
 	if err != nil {
 		return nil, err
 	}
 
-	return docker, nil
+	dc, err := rawDc.NewClientWithOpts(rawDc.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	mgr.rawDcClient = dc
+
+	return mgr, nil
 }
 
 func (m *Manager) ExecBitcoindCliCmd(ctx context.Context, command []string) (bytes.Buffer, bytes.Buffer, error) {
@@ -196,7 +207,11 @@ func (m *Manager) RunBabylondResource(
 				"--btc-confirmation-depth=2 --additional-sender-account --btc-network=regtest "+
 				"--min-staking-time-blocks=200 --min-staking-amount-sat=10000 "+
 				"--epoch-interval=%d --slashing-pk-script=%s --btc-base-header=%s "+
-				"--covenant-quorum=1 --covenant-pks=%s && chmod -R 777 /home && babylond start --home=/home/node0/babylond",
+				"--covenant-quorum=1 --covenant-pks=%s && "+
+				"chmod -R 777 /home && "+
+				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node0/babylond/config/app.toml && "+ // disable the cache otherwise we go OOM
+				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node0/babylond/config/app.toml && "+
+				"babylond start --home=/home/node0/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 			epochInterval, slashingPkScript, baseHeaderHex, bbn.NewBIP340PubKeyFromBTCPK(CovenantPubKey).MarshalHex()),
 	}
 
@@ -215,6 +230,7 @@ func (m *Manager) RunBabylondResource(
 			ExposedPorts: []string{
 				"9090/tcp", // only expose what we need
 				"26657/tcp",
+				"6060/tcp",
 			},
 			Cmd: cmd,
 		},
@@ -222,7 +238,7 @@ func (m *Manager) RunBabylondResource(
 			config.PortBindings = map[docker.Port][]docker.PortBinding{
 				"9090/tcp":  {{HostIP: "", HostPort: "9090"}},
 				"26657/tcp": {{HostIP: "", HostPort: "26657"}},
-				"8080/tcp":  {{HostIP: "", HostPort: "8080"}},
+				"6060/tcp":  {{HostIP: "", HostPort: "6060"}},
 			}
 		},
 		noRestart,
@@ -234,6 +250,26 @@ func (m *Manager) RunBabylondResource(
 	m.resources[babylondContainerName] = resource
 
 	return resource, nil
+}
+
+func (m *Manager) MemoryUsage(ctx context.Context, containerName string) (uint64, error) {
+	containerId := m.resources[containerName].Container.ID
+
+	res, err := m.rawDcClient.ContainerStats(ctx, containerId, false)
+	if err != nil {
+		return 0, err
+	}
+
+	defer res.Body.Close()
+
+	// Decode stats JSON
+	var containerStats types.StatsJSON //nolint:staticcheck
+	decoder := json.NewDecoder(res.Body)
+	if err := decoder.Decode(&containerStats); err != nil {
+		return 0, err
+	}
+
+	return containerStats.MemoryStats.Usage, nil
 }
 
 // ClearResources removes all outstanding Docker resources created by the Manager.
