@@ -263,7 +263,7 @@ func (m *Manager) MemoryUsage(ctx context.Context, containerName string) (uint64
 	defer res.Body.Close()
 
 	// Decode stats JSON
-	var containerStats types.StatsJSON
+	var containerStats types.StatsJSON //nolint:staticcheck
 	decoder := json.NewDecoder(res.Body)
 	if err := decoder.Decode(&containerStats); err != nil {
 		return 0, err
