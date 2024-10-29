@@ -101,7 +101,7 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	go printStatsForever(ctx, stopChan, cfg)
+	go printStatsForever(ctx, tm, stopChan, cfg)
 
 	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
 	if err != nil {
@@ -128,7 +128,7 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 	return nil
 }
 
-func printStatsForever(ctx context.Context, stopChan chan struct{}, cfg config.Config) {
+func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struct{}, cfg config.Config) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 
@@ -146,7 +146,13 @@ func printStatsForever(ctx context.Context, stopChan chan struct{}, cfg config.C
 				close(stopChan)
 			}
 
-			fmt.Printf("📄 Delegations sent: %d\n", atomic.LoadInt32(&delegationsSentCounter))
+			mem, err := tm.manger.MemoryUsage(ctx, "babylond")
+			if err != nil {
+				fmt.Printf("err getting memory usage for bbn node %v\n", err)
+			}
+			now := time.Now()
+			fmt.Printf("📄 Delegations sent: %d, ts: %s, mem: %d MB\n",
+				atomic.LoadInt32(&delegationsSentCounter), now.Format(time.UnixDate), mem/1e6)
 			prevSent = atomic.LoadInt32(&delegationsSentCounter)
 		case <-ctx.Done():
 			return

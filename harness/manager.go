@@ -188,7 +188,7 @@ func (tm *TestManager) Stop() {
 
 	tm.BitcoindHandler.Stop()
 
-	if tm.benchConfig.BabylonPath != "" {
+	if tm.benchConfig.BabylonPath == "" {
 		cleanupDir(tm.babylonDir) // don't cleanup babylon if user specified a path
 	}
 }
