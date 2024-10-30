@@ -600,9 +600,6 @@ func (fpm *FinalityProviderManager) countNonFinalized() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if len(resp.Blocks) == 0 {
-		return 10, nil
-	}
 
 	return len(resp.Blocks), nil
 }
