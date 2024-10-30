@@ -244,8 +244,6 @@ func cleanupDir(path string) {
 }
 
 func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
 	// 	1 sat/vB
 	// = 1 sat/vB × 1000 vB/kvB
 	// = 1000 sat/kvB × 1/100'000'000 ₿/sat
@@ -264,9 +262,12 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	tx := wire.NewMsgTx(2)
 	tx.AddTxOut(stakingOutput)
 
+	// todo(lazar): investigate if we can push this more, currently max ~50txs/block
+	lock := true
 	rawTxResult, err := tm.TestRpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
 		FeeRate:        &feeRate,
 		ChangePosition: &pos,
+		LockUnspents:   &lock,
 	}, nil)
 	if err != nil {
 		return nil, nil, err
