@@ -164,7 +164,7 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 				continue
 			}
 
-			if tipBlocks == nil || len(tipBlocks) == 0 {
+			if tipBlocks == nil {
 				continue
 			}
 
@@ -574,18 +574,6 @@ func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint
 	}
 
 	return height, nil
-}
-
-func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlock() (*BlockInfo, error) {
-	blocks, err := fpm.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_NON_FINALIZED, false)
-	if err != nil {
-		return nil, err
-	}
-	if len(blocks) == 0 {
-		return nil, nil
-	}
-
-	return blocks[0], nil
 }
 
 func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlocks(count uint64) ([]*BlockInfo, error) {

@@ -26,7 +26,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 )
 
@@ -60,7 +59,6 @@ type TestManager struct {
 	Config          *config.Config
 	WalletPrivKey   *btcec.PrivateKey
 	manger          *container.Manager
-	mu              sync.Mutex
 	babylonDir      string
 	benchConfig     benchcfg.Config
 }
