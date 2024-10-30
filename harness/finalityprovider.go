@@ -24,10 +24,6 @@ import (
 	"time"
 )
 
-const (
-	lagGap = 3
-)
-
 type BlockInfo struct {
 	Height    uint64
 	Hash      []byte
@@ -602,8 +598,4 @@ func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlocks(count uint64) 
 	}
 
 	return blocks, nil
-}
-
-func (fpi *FinalityProviderInstance) isLagging(currentBlock *BlockInfo) bool {
-	return currentBlock.Height >= fpi.lastVotedHeight+lagGap
 }
