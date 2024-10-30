@@ -157,35 +157,45 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 	for {
 		select {
 		case <-commitRandTicker.C:
-			tipBlock, err := fpm.getEarliestNonFinalizedBlock()
+			tipBlocks, err := fpm.getEarliestNonFinalizedBlocks(5)
 
 			if err != nil {
 				fmt.Printf("🚫 Err %v\n", err)
 				continue
 			}
 
-			if tipBlock == nil {
+			if tipBlocks == nil {
 				continue
 			}
 
 			for _, fp := range fpm.finalityProviders {
 				go func() {
-					hasVp, err := fp.hasVotingPower(ctx, tipBlock)
-					if err != nil {
-						fmt.Printf("🚫 Err getting voting power %v\n", err)
-					}
-					if !hasVp {
-						return
+					var blocks []*BlockInfo
+					for _, b := range tipBlocks {
+						hasVp, err := fp.hasVotingPower(ctx, b)
+						if err != nil {
+							fmt.Printf("🚫 Err getting voting power %v\n", err)
+						}
+
+						if !hasVp {
+							continue
+						}
+
+						if fp.lastVotedHeight >= b.Height {
+							return
+						}
+
+						blocks = append(blocks, b)
 					}
 
-					if fp.lastVotedHeight >= tipBlock.Height {
+					if len(blocks) == 0 {
 						return
 					}
 
 					prevVoted := fp.lastVotedHeight
-					fp.lastVotedHeight = tipBlock.Height // optimistic
+					fp.lastVotedHeight = blocks[len(blocks)-1].Height // optimistic
 
-					if err = fpm.submitFinalitySignature(ctx, tipBlock, fp); err != nil {
+					if err = fpm.submitFinalitySignature(ctx, blocks, fp); err != nil {
 						fmt.Printf("🚫 Err submitting fin signature: %v\n", err)
 						fp.lastVotedHeight = prevVoted
 					}
@@ -378,38 +388,40 @@ func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
 	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
 }
 
-func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context, b *BlockInfo, fpi *FinalityProviderInstance) error {
-	sig, err := fpm.signFinalitySig(b, fpi.btcPk)
+func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context, b []*BlockInfo, fpi *FinalityProviderInstance) error {
+	prList, err := fpm.getPubRandList(b[0].Height, uint32(len(b)), *fpi.btcPk)
 	if err != nil {
 		return err
 	}
 
-	prList, err := fpm.getPubRandList(b.Height, 1, *fpi.btcPk)
-	if err != nil {
-		return err
-	}
-
-	pubRand := prList[0]
-
-	proofBytes, err := fpi.proofStore.GetPubRandProof(pubRand)
+	proofBytes, err := fpi.proofStore.GetPubRandProofList(prList)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to get inclusion proof of public randomness %s for FP %s for block %d: %w",
-			pubRand.String(),
+			"failed to get inclusion proof of public randomness for FP %s for block range [%d-%d]: %w",
 			fpi.btcPk.MarshalHex(),
-			b.Height,
+			b[0].Height,
+			b[len(b)-1].Height,
 			err,
 		)
 	}
 
-	err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, pubRand, proofBytes, sig.ToModNScalar())
+	sigList := make([]*btcec.ModNScalar, 0, len(b))
+	for _, block := range b {
+		eotsSig, err := fpm.signFinalitySig(block, fpi.btcPk)
+		if err != nil {
+			return err
+		}
+		sigList = append(sigList, eotsSig.ToModNScalar())
+	}
+
+	err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, prList, proofBytes, sigList)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("✍️ Fp %s, voted for block %d\n", fpi.btcPk.MarshalHex(), b.Height)
+	fmt.Printf("✍️ Fp %s, voted for block range [%d-%d]\n", fpi.btcPk.MarshalHex(), b[0].Height, b[len(b)-1].Height)
 
-	fpi.lastVotedHeight = b.Height
+	fpi.lastVotedHeight = b[len(b)-1].Height // we assume this. 🤞
 
 	return nil
 }
@@ -429,28 +441,36 @@ func (fpm *FinalityProviderManager) signFinalitySig(b *BlockInfo, btcPk *bbntype
 func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 	ctx context.Context,
 	fpPk *btcec.PublicKey,
-	block *BlockInfo,
-	pubRand *btcec.FieldVal,
-	proof []byte,
-	sig *btcec.ModNScalar,
+	blocks []*BlockInfo,
+	pubRandList []*btcec.FieldVal,
+	proofList [][]byte,
+	sigs []*btcec.ModNScalar,
 ) error {
-	cmtProof := cmtcrypto.Proof{}
-	if err := cmtProof.Unmarshal(proof); err != nil {
-		return err
+	if len(blocks) != len(sigs) {
+		return fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(blocks), len(sigs))
 	}
 
-	msg := &finalitytypes.MsgAddFinalitySig{
-		Signer:       fpi.client.BabylonAddress.String(),
-		FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-		BlockHeight:  block.Height,
-		PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRand),
-		Proof:        &cmtProof,
-		BlockAppHash: block.Hash,
-		FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sig),
+	msgs := make([]sdk.Msg, 0, len(blocks))
+	for i, block := range blocks {
+		cmtProof := cmtcrypto.Proof{}
+		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
+			return err
+		}
+
+		msg := &finalitytypes.MsgAddFinalitySig{
+			Signer:       fpi.client.BabylonAddress.String(),
+			FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+			BlockHeight:  block.Height,
+			PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]),
+			Proof:        &cmtProof,
+			BlockAppHash: block.Hash,
+			FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sigs[i]),
+		}
+
+		msgs = append(msgs, msg)
 	}
 
-	_, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
-	if err != nil {
+	if _, err := fpi.client.SendMsgs(ctx, msgs); err != nil {
 		return err
 	}
 
@@ -556,8 +576,8 @@ func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint
 	return height, nil
 }
 
-func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlock() (*BlockInfo, error) {
-	blocks, err := fpm.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_NON_FINALIZED, false)
+func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlocks(count uint64) ([]*BlockInfo, error) {
+	blocks, err := fpm.queryLatestBlocks(nil, count, finalitytypes.QueriedBlockStatus_NON_FINALIZED, false)
 	if err != nil {
 		return nil, err
 	}
@@ -565,5 +585,5 @@ func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlock() (*BlockInfo, 
 		return nil, nil
 	}
 
-	return blocks[0], nil
+	return blocks, nil
 }

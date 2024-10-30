@@ -127,22 +127,23 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 
 	return nil
 }
-
 func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struct{}, cfg config.Config) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 
 	prevSent := int32(0)
+	prevTime := time.Now()
+
 	for {
 		select {
 		case <-t.C:
-			if atomic.LoadInt32(&delegationsSentCounter) == 0 || atomic.LoadInt32(&delegationsSentCounter) == prevSent {
+			currentSent := atomic.LoadInt32(&delegationsSentCounter)
+			if currentSent == 0 || currentSent == prevSent {
 				continue
 			}
 
-			if cfg.TotalDelegations != 0 && atomic.LoadInt32(&delegationsSentCounter) >= int32(cfg.TotalDelegations) {
-				// we could be a bit off, but let's not complicate things, avoid propagating chan deep
-				fmt.Printf("🟩 Reached desired total delegation %d, stopping the CLI...\n", atomic.LoadInt32(&delegationsSentCounter))
+			if cfg.TotalDelegations != 0 && currentSent >= int32(cfg.TotalDelegations) {
+				fmt.Printf("🟩 Reached desired total delegation %d, stopping the CLI...\n", currentSent)
 				close(stopChan)
 			}
 
@@ -150,13 +151,16 @@ func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struc
 			if err != nil {
 				fmt.Printf("err getting memory usage for bbn node %v\n", err)
 			}
+
 			now := time.Now()
-			fmt.Printf("📄 Delegations sent: %d, ts: %s, mem: %d MB\n",
-				atomic.LoadInt32(&delegationsSentCounter), now.Format(time.UnixDate), mem/1e6)
-			prevSent = atomic.LoadInt32(&delegationsSentCounter)
+			delegationsPerSecond := float64(currentSent-prevSent) / now.Sub(prevTime).Seconds()
+			fmt.Printf("📄 Delegations sent: %d, rate: %.2f delegations/sec, ts: %s, mem: %d MB\n",
+				currentSent, delegationsPerSecond, now.Format(time.UnixDate), mem/1e6)
+
+			prevSent = currentSent
+			prevTime = now
 		case <-ctx.Done():
 			return
 		}
-
 	}
 }

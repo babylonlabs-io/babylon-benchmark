@@ -211,6 +211,7 @@ func (m *Manager) RunBabylondResource(
 				"chmod -R 777 /home && "+
 				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node0/babylond/config/app.toml && "+ // disable the cache otherwise we go OOM
 				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node0/babylond/config/app.toml && "+
+				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node0/babylond/config/config.toml &&`+
 				"babylond start --home=/home/node0/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 			epochInterval, slashingPkScript, baseHeaderHex, bbn.NewBIP340PubKeyFromBTCPK(CovenantPubKey).MarshalHex()),
 	}
