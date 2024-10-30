@@ -157,7 +157,13 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 	for {
 		select {
 		case <-commitRandTicker.C:
-			tipBlocks, err := fpm.getEarliestNonFinalizedBlocks(5)
+
+			countNonFinalized, err := fpm.countNonFinalized()
+			if err != nil {
+				fmt.Printf("🚫 Err %v\n", err)
+				continue
+			}
+			tipBlocks, err := fpm.getEarliestNonFinalizedBlocks(uint64(countNonFinalized))
 
 			if err != nil {
 				fmt.Printf("🚫 Err %v\n", err)
@@ -586,4 +592,14 @@ func (fpm *FinalityProviderManager) getEarliestNonFinalizedBlocks(count uint64) 
 	}
 
 	return blocks, nil
+}
+
+func (fpm *FinalityProviderManager) countNonFinalized() (int, error) {
+	resp, err := fpm.tm.BabylonClient.ListBlocks(finalitytypes.QueriedBlockStatus_NON_FINALIZED, nil)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return len(resp.Blocks), nil
 }
