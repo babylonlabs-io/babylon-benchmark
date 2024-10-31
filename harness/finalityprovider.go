@@ -42,12 +42,12 @@ type FinalityProviderManager struct {
 	eotsDb            string
 }
 type FinalityProviderInstance struct {
-	btcPk           *bbntypes.BIP340PubKey
-	proofStore      *lib.PubRandProofStore
-	fpAddr          sdk.AccAddress
-	pop             *bstypes.ProofOfPossessionBTC
-	client          *SenderWithBabylonClient
-	lastVotedHeight uint64
+	btcPk       *bbntypes.BIP340PubKey
+	proofStore  *lib.PubRandProofStore
+	fpAddr      sdk.AccAddress
+	pop         *bstypes.ProofOfPossessionBTC
+	client      *SenderWithBabylonClient
+	votedBlocks map[uint64]struct{}
 }
 
 func NewFinalityProviderManager(
@@ -122,11 +122,12 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 			return err
 		}
 		fpis[i] = &FinalityProviderInstance{
-			btcPk:      btcPk,
-			proofStore: lib.NewPubRandProofStore(),
-			pop:        pop,
-			fpAddr:     finalitySender.BabylonAddress,
-			client:     finalitySender,
+			btcPk:       btcPk,
+			proofStore:  lib.NewPubRandProofStore(),
+			pop:         pop,
+			fpAddr:      finalitySender.BabylonAddress,
+			client:      finalitySender,
+			votedBlocks: make(map[uint64]struct{}),
 		}
 
 		if _, err = fpis[i].register(ctx, finalitySender.BabylonAddress.String(), btcPk, pop); err != nil {
@@ -187,8 +188,9 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 							continue
 						}
 
-						if fp.lastVotedHeight >= b.Height {
-							return
+						_, voted := fp.votedBlocks[b.Height]
+						if voted {
+							continue
 						}
 
 						blocks = append(blocks, b)
@@ -198,12 +200,8 @@ func (fpm *FinalityProviderManager) submitFinalitySigForever(ctx context.Context
 						return
 					}
 
-					prevVoted := fp.lastVotedHeight
-					fp.lastVotedHeight = blocks[len(blocks)-1].Height // optimistic
-
 					if err = fpm.submitFinalitySignature(ctx, blocks, fp); err != nil {
 						fmt.Printf("🚫 Err submitting fin signature: %v\n", err)
-						fp.lastVotedHeight = prevVoted
 					}
 				}()
 			}
@@ -418,16 +416,14 @@ func (fpm *FinalityProviderManager) submitFinalitySignature(ctx context.Context,
 			return err
 		}
 		sigList = append(sigList, eotsSig.ToModNScalar())
+		fpi.votedBlocks[block.Height] = struct{}{} // we assume that all submitted votes to bbn will be accepted
 	}
 
-	err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, prList, proofBytes, sigList)
-	if err != nil {
+	if err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, prList, proofBytes, sigList); err != nil {
 		return err
 	}
 
 	fmt.Printf("✍️ Fp %s, voted for block range [%d-%d]\n", fpi.btcPk.MarshalHex(), b[0].Height, b[len(b)-1].Height)
-
-	fpi.lastVotedHeight = b[len(b)-1].Height // we assume this. 🤞
 
 	return nil
 }
