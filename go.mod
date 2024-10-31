@@ -17,7 +17,6 @@ require (
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/babylonlabs-io/babylon v0.14.0
 	github.com/babylonlabs-io/finality-provider v0.9.1
-	github.com/babylonlabs-io/vigilante v0.14.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
