@@ -3,16 +3,21 @@ package harness
 import (
 	"bytes"
 	"context"
-	"cosmossdk.io/errors"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"cosmossdk.io/errors"
 	benchcfg "github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	"github.com/babylonlabs-io/babylon/client/config"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	"github.com/babylonlabs-io/vigilante/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
@@ -24,10 +29,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 var (
@@ -41,25 +42,13 @@ const (
 	chainId = "chain-test"
 )
 
-func defaultConfig() *config.Config {
-	cfg := config.DefaultConfig()
-	cfg.BTC.NetParams = regtestParams.Name
-	cfg.BTC.Endpoint = "127.0.0.1:18443"
-	cfg.BTC.WalletPassword = "pass"
-	cfg.BTC.Username = "user"
-	cfg.BTC.Password = "pass"
-	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
-
-	return cfg
-}
-
 type TestManager struct {
 	TestRpcClient   *rpcclient.Client
 	BitcoindHandler *BitcoindTestHandler
 	BabylonClient   *bbnclient.Client
-	Config          *config.Config
 	WalletPrivKey   *btcec.PrivateKey
 	manger          *container.Manager
+	Cfg             config.BabylonConfig
 	mu              sync.Mutex
 	babylonDir      string
 	benchConfig     benchcfg.Config
@@ -81,14 +70,12 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	passphrase := "pass"
 	_ = btcHandler.CreateWallet(ctx, "default", passphrase)
 
-	cfg := defaultConfig()
-
-	cfg.BTC.Endpoint = fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
+	endpoint := fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
 
 	testRpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:                 cfg.BTC.Endpoint,
-		User:                 cfg.BTC.Username,
-		Pass:                 cfg.BTC.Password,
+		Host:                 endpoint,
+		User:                 "user",
+		Pass:                 "pass",
 		DisableTLS:           true,
 		DisableConnectOnNew:  true,
 		DisableAutoReconnect: false,
@@ -140,16 +127,18 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		return nil, err
 	}
 
+	cfg := config.DefaultBabylonConfig()
+
 	// create a Babylon client
-	cfg.Babylon.KeyDirectory = filepath.Join(babylonDir, "node0", "babylond")
-	cfg.Babylon.Key = "test-spending-key" // keyring to bbn node
-	cfg.Babylon.GasAdjustment = 3.0
+	cfg.KeyDirectory = filepath.Join(babylonDir, "node0", "babylond")
+	cfg.Key = "test-spending-key" // keyring to bbn node
+	cfg.GasAdjustment = 3.0
 
 	// update port with the dynamically allocated one from docker
-	cfg.Babylon.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
-	cfg.Babylon.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
+	cfg.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
+	cfg.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
 
-	babylonClient, err := bbnclient.New(&cfg.Babylon, nil)
+	babylonClient, err := bbnclient.New(&cfg, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -168,8 +157,8 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		TestRpcClient:   testRpcClient,
 		BabylonClient:   babylonClient,
 		BitcoindHandler: btcHandler,
-		Config:          cfg,
 		WalletPrivKey:   walletPrivKey,
+		Cfg:             cfg,
 		manger:          manager,
 		babylonDir:      babylonDir,
 		benchConfig:     runCfg,

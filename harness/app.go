@@ -3,11 +3,12 @@ package harness
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"go.uber.org/zap"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -33,20 +34,20 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 	// bold text
 	fmt.Printf("🟢 Starting with \033[1m%d\033[0m stakers, \u001B[1m%d\u001B[0m finality providers.\n", numStakers, numFinalityProviders)
 
-	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}
 
-	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func startHarness(ctx context.Context, cfg config.Config) error {
 
 	go printStatsForever(ctx, tm, stopChan, cfg)
 
-	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Cfg.RPCAddr, tm.Cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}

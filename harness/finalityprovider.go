@@ -2,8 +2,10 @@ package harness
 
 import (
 	"context"
-	sdkmath "cosmossdk.io/math"
 	"fmt"
+	"time"
+
+	sdkmath "cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -21,7 +23,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-	"time"
 )
 
 type BlockInfo struct {
@@ -94,7 +95,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 	for i := 0; i < fpm.fpCount; i++ {
 		keyName := lib.GenRandomHexStr(r, 10)
 
-		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon.RPCAddr, fpm.tm.Config.Babylon.GRPCAddr)
+		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Cfg.RPCAddr, fpm.tm.Cfg.GRPCAddr)
 		if err != nil {
 			return err
 		}
