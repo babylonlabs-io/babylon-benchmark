@@ -32,7 +32,7 @@ ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/babylon-benchmark/lib/version
 
 
 BUILD_TARGETS := build install
-BUILD_FLAGS := --tags "$(build_tags)" --ldflags '$(ldflags)'
+BUILD_FLAGS := --tags "$(build_tags)" --ldflags '$(ldflags)' -race
 
 build-babylond:
 	$(MAKE) -C $(GIT_TOPLEVEL)/submodules/babylon/contrib/images babylond

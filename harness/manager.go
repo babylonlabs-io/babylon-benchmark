@@ -11,8 +11,8 @@ import (
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	"github.com/babylonlabs-io/vigilante/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
@@ -40,14 +40,26 @@ const (
 	chainId = "chain-test"
 )
 
-func defaultConfig() *config.Config {
-	cfg := config.DefaultConfig()
+type Config struct {
+	BTC     benchcfg.BTCConfig   `mapstructure:"btc"`
+	Babylon bbncfg.BabylonConfig `mapstructure:"babylon"`
+}
+
+func DefaultConfig() *Config {
+	return &Config{
+		BTC:     benchcfg.DefaultBTCConfig(),
+		Babylon: bbncfg.DefaultBabylonConfig(),
+	}
+}
+
+func defaultConfig() *Config {
+	cfg := DefaultConfig()
 	cfg.BTC.NetParams = regtestParams.Name
 	cfg.BTC.Endpoint = "127.0.0.1:18443"
 	cfg.BTC.WalletPassword = "pass"
 	cfg.BTC.Username = "user"
 	cfg.BTC.Password = "pass"
-	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
+	cfg.BTC.ZmqSeqEndpoint = benchcfg.DefaultZmqSeqEndpoint
 
 	return cfg
 }
@@ -56,7 +68,7 @@ type TestManager struct {
 	TestRpcClient   *rpcclient.Client
 	BitcoindHandler *BitcoindTestHandler
 	BabylonClient   *bbnclient.Client
-	Config          *config.Config
+	Config          *Config
 	WalletPrivKey   *btcec.PrivateKey
 	manger          *container.Manager
 	babylonDir      string
