@@ -207,7 +207,8 @@ func (m *Manager) RunBabylondResource(
 				"--btc-confirmation-depth=2 --additional-sender-account --btc-network=regtest "+
 				"--min-staking-time-blocks=200 --min-staking-amount-sat=10000 "+
 				"--epoch-interval=%d --slashing-pk-script=%s --btc-base-header=%s "+
-				"--covenant-quorum=1 --covenant-pks=%s && "+
+				"--covenant-quorum=1 --covenant-pks=%s "+
+				"--min-signed-per-window=0 && "+ // never jail sluggish fps
 				"chmod -R 777 /home && "+
 				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node0/babylond/config/app.toml && "+ // disable the cache otherwise we go OOM
 				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node0/babylond/config/app.toml && "+
