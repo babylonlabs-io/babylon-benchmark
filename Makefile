@@ -34,6 +34,8 @@ ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/babylon-benchmark/lib/version
 BUILD_TARGETS := build install
 BUILD_FLAGS := --tags "$(build_tags)" --ldflags '$(ldflags)'
 
+PACKAGES_E2E=$(shell go list ./... | grep '/e2e')
+
 build-babylond:
 	$(MAKE) -C $(GIT_TOPLEVEL)/submodules/babylon/contrib/images babylond
 
@@ -59,5 +61,8 @@ $(BUILDDIR)/:
 
 run-dgd: build
 	@./build/dgd generate --total-fps 5 --total-stakers 150
+
+test-e2e:
+	go test -mod=readonly -failfast -timeout=15m -v $(PACKAGES_E2E) -count=1
 
 .PHONY: build help

@@ -18,7 +18,10 @@ func Run(ctx context.Context, cfg config.Config) error {
 	return startHarness(ctx, cfg)
 }
 
-func startHarness(ctx context.Context, cfg config.Config) error {
+func startHarness(cmdCtx context.Context, cfg config.Config) error {
+	ctx, cancel := context.WithCancel(cmdCtx)
+	defer cancel()
+
 	numStakers := cfg.TotalStakers
 	numFinalityProviders := cfg.TotalFinalityProviders
 	const numMatureOutputs = uint32(500)
