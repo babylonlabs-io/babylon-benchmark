@@ -41,14 +41,15 @@ type FinalityProviderManager struct {
 	eotsDb            string
 }
 type FinalityProviderInstance struct {
-	btcPk       *bbntypes.BIP340PubKey
-	proofStore  *lib.PubRandProofStore
-	fpAddr      sdk.AccAddress
-	pop         *bstypes.ProofOfPossessionBTC
-	client      *SenderWithBabylonClient
-	votedBlocks map[uint64]struct{}
-	localEOTS   *eotsmanager.LocalEOTSManager
-	passphrase  string
+	btcPk          *bbntypes.BIP340PubKey
+	proofStore     *lib.PubRandProofStore
+	fpAddr         sdk.AccAddress
+	pop            *bstypes.ProofOfPossessionBTC
+	client         *SenderWithBabylonClient
+	votedBlocks    map[uint64]struct{}
+	localEOTS      *eotsmanager.LocalEOTSManager
+	passphrase     string
+	lastVotedBlock uint64
 }
 
 func NewFinalityProviderManager(
@@ -365,6 +366,8 @@ func (fpi *FinalityProviderInstance) submitFinalitySignature(ctx context.Context
 		fpi.votedBlocks[block.Height] = struct{}{} // we assume that all submitted votes to bbn will be accepted
 	}
 
+	fpi.lastVotedBlock = b[len(b)-1].Height + 1
+
 	if err = fpi.SubmitFinalitySig(ctx, fpi.btcPk.MustToBTCPK(), b, prList, proofBytes, sigList); err != nil {
 		return err
 	}
@@ -456,13 +459,13 @@ func (fpi *FinalityProviderInstance) getVotingPowerWithRetry(ctx context.Context
 	return power, nil
 }
 
-func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *BlockInfo) (bool, error) {
-	power, err := fpi.getVotingPowerWithRetry(ctx, b.Height)
+func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, height uint64) (bool, error) {
+	power, err := fpi.getVotingPowerWithRetry(ctx, height)
 	if err != nil {
 		return false, err
 	}
 	if power == 0 {
-		fmt.Printf("🙁 Fp %s, has no voting power block: %d\n", fpi.btcPk.MarshalHex(), b.Height)
+		fmt.Printf("🙁 Fp %s, has no voting power block: %d\n", fpi.btcPk.MarshalHex(), height)
 		return false, nil
 	}
 
@@ -546,11 +549,24 @@ func (fpi *FinalityProviderInstance) countNonFinalized() (int, error) {
 	return len(resp.Blocks), nil
 }
 
+func (fpi *FinalityProviderInstance) getCometBlock(ctx context.Context, height int64) (*BlockInfo, error) {
+	res, err := fpi.client.RPCClient.Block(ctx, &height)
+	if err != nil {
+		return nil, fmt.Errorf("err getting comet block %w", err)
+	}
+
+	return &BlockInfo{
+		Height: uint64(res.Block.Height),
+		Hash:   res.Block.Header.AppHash,
+	}, nil
+}
+
 func (fpi *FinalityProviderInstance) start(ctx context.Context) {
 	go fpi.submitFinalitySigForever(ctx)
 }
 
 func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Context) {
+	hasVotedOnce := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -558,16 +574,29 @@ func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Contex
 		default:
 		}
 		time.Sleep(100 * time.Millisecond)
-		countNonFinalized, err := fpi.countNonFinalized()
-		if err != nil {
-			fmt.Printf("🚫 Err %v\n", err)
-			continue
-		}
+		var tipBlocks []*BlockInfo
+		// as soon as we vote for the first batch of blocks, use comet blocks for next ones
+		// to reduce to RPC load on the finality module
+		if !hasVotedOnce {
+			countNonFinalized, err := fpi.countNonFinalized()
+			if err != nil {
+				fmt.Printf("🚫 Err %v\n", err)
+				continue
+			}
 
-		tipBlocks, err := fpi.getEarliestNonFinalizedBlocks(uint64(countNonFinalized))
-		if err != nil {
-			fmt.Printf("🚫 Err %v\n", err)
-			continue
+			tipBlocks, err = fpi.getEarliestNonFinalizedBlocks(uint64(countNonFinalized))
+			if err != nil {
+				fmt.Printf("🚫 Err %v\n", err)
+				continue
+			}
+		} else {
+			block, err := fpi.getCometBlock(ctx, int64(fpi.lastVotedBlock))
+			if err != nil {
+				fmt.Printf("🚫 Err %v\n", err)
+				continue
+			}
+
+			tipBlocks = []*BlockInfo{block}
 		}
 
 		if tipBlocks == nil {
@@ -576,7 +605,7 @@ func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Contex
 
 		var blocks []*BlockInfo
 		for _, b := range tipBlocks {
-			hasVp, err := fpi.hasVotingPower(ctx, b)
+			hasVp, err := fpi.hasVotingPower(ctx, b.Height)
 			if err != nil {
 				fmt.Printf("🚫 Err getting voting power %v\n", err)
 			}
@@ -597,9 +626,10 @@ func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Contex
 			continue
 		}
 
-		if err = fpi.submitFinalitySignature(ctx, blocks); err != nil {
+		if err := fpi.submitFinalitySignature(ctx, blocks); err != nil {
 			fmt.Printf("🚫 Err submitting fin signature: %v\n", err)
 		}
 
+		hasVotedOnce = true
 	}
 }
