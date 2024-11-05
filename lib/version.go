@@ -16,7 +16,7 @@ func GetBabylonVersion() (string, error) {
 	}
 
 	fmt.Println("Current working directory:", dir)
-	goModPath := filepath.Join("go.mod")
+	goModPath := filepath.Join("..", "go.mod")
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
 		return "", err
