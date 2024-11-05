@@ -125,7 +125,6 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	select {
 	case <-ctx.Done():
 	case <-stopChan:
-		cancel()
 		return nil
 	}
 
