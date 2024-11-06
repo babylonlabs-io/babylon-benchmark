@@ -9,20 +9,13 @@ import (
 
 // GetBabylonVersion returns babylond version from go.mod
 func GetBabylonVersion() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error:", err)
-
-	}
-
-	fmt.Println("Current working directory:", dir)
 	goModPaths := []string{filepath.Join("go.mod"), filepath.Join("..", "go.mod")}
 
 	var data []byte
 	for _, goModPath := range goModPaths {
-		data, err = os.ReadFile(goModPath)
-		if err != nil {
-			continue
+		data, _ = os.ReadFile(goModPath)
+		if data != nil {
+			break
 		}
 	}
 
