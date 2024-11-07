@@ -190,6 +190,10 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		return err == nil
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "err waiting current epoch")
 
+	if err != nil {
+		return nil, err
+	}
+
 	// wait until Babylon1 is ready
 	err = lib.Eventually(ctx, func() bool {
 		_, err := babylonClientNode1.CurrentEpoch()
