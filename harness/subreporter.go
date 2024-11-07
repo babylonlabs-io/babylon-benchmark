@@ -167,6 +167,7 @@ func (s *SubReporter) waitFor2TransactionsConfirmation(
 			proof, err := s.buildSpvProof(txHash, txHash2, requiredDepth)
 			if err != nil {
 				fmt.Printf("🚫 Err building proof %v\n", err)
+				continue
 			}
 
 			if proof != nil {

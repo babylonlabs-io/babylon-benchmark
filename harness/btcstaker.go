@@ -79,6 +79,7 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 			paramsResp, err := s.client.BTCStakingParams()
 			if err != nil {
 				fmt.Printf("🚫 Err getting staking params %v\n", err)
+				continue
 			}
 			_ = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 		}
