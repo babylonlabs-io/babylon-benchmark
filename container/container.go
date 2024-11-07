@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	bitcoindContainerName = "bitcoind"
-	babylondContainerName = "babylond"
+	bitcoindContainerName      = "bitcoind"
+	babylondNode0ContainerName = "babylond-node0"
+	babylondNode1ContainerName = "babylond-node1"
 )
 
 var (
@@ -39,6 +40,7 @@ type Manager struct {
 	pool        *dockertest.Pool
 	resources   map[string]*dockertest.Resource
 	rawDcClient *rawDc.Client
+	network     *docker.Network
 }
 
 // NewManager creates a new Manager instance and initializes
@@ -148,12 +150,11 @@ func (m *Manager) ExecCmd(ctx context.Context, containerName string, command []s
 
 // RunBitcoindResource starts a bitcoind docker container
 func (m *Manager) RunBitcoindResource(
-	name string,
 	bitcoindCfgPath string,
 ) (*dockertest.Resource, error) {
 	bitcoindResource, err := m.pool.RunWithOptions(
 		&dockertest.RunOptions{
-			Name:       fmt.Sprintf("%s-%s", bitcoindContainerName, name),
+			Name:       bitcoindContainerName,
 			Repository: m.cfg.BitcoindRepository,
 			Tag:        m.cfg.BitcoindVersion,
 			User:       "root:root",
@@ -194,15 +195,28 @@ func (m *Manager) RunBitcoindResource(
 
 // RunBabylondResource starts a babylond container
 func (m *Manager) RunBabylondResource(
-	name string,
 	mounthPath string,
 	baseHeaderHex string,
 	slashingPkScript string,
 	epochInterval uint,
-) (*dockertest.Resource, error) {
+) (*dockertest.Resource, *dockertest.Resource, error) {
+	network, err := m.pool.Client.CreateNetwork(docker.CreateNetworkOptions{
+		Name:   "babylon",
+		Driver: "bridge",
+		IPAM: &docker.IPAMOptions{
+			Config: []docker.IPAMConfig{
+				{
+					Subnet: "192.168.10.0/24",
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
 	cmd := []string{
 		"sh", "-c", fmt.Sprintf(
-			"babylond testnet --v=1 --output-dir=/home --starting-ip-address=192.168.10.2 "+
+			"babylond testnet --v=2 --output-dir=/home --starting-ip-address=192.168.10.2 "+
 				"--keyring-backend=test --chain-id=chain-test --btc-finalization-timeout=4 "+
 				"--btc-confirmation-depth=2 --additional-sender-account --btc-network=regtest "+
 				"--min-staking-time-blocks=200 --min-staking-amount-sat=10000 "+
@@ -217,9 +231,9 @@ func (m *Manager) RunBabylondResource(
 			epochInterval, slashingPkScript, baseHeaderHex, bbn.NewBIP340PubKeyFromBTCPK(CovenantPubKey).MarshalHex()),
 	}
 
-	resource, err := m.pool.RunWithOptions(
+	resourceFirstNode, err := m.pool.RunWithOptions(
 		&dockertest.RunOptions{
-			Name:       fmt.Sprintf("%s-%s", babylondContainerName, name),
+			Name:       babylondNode0ContainerName,
 			Repository: m.cfg.BabylonRepository,
 			Tag:        m.cfg.BabylonVersion,
 			Labels: map[string]string{
@@ -246,12 +260,85 @@ func (m *Manager) RunBabylondResource(
 		noRestart,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	m.resources[babylondContainerName] = resource
+	err = m.pool.Client.ConnectNetwork(network.ID, docker.NetworkConnectionOptions{
+		Container: resourceFirstNode.Container.ID,
+		EndpointConfig: &docker.EndpointConfig{
+			IPAMConfig: &docker.EndpointIPAMConfig{
+				IPv4Address: "192.168.10.2",
+			},
+		},
+	})
 
-	return resource, nil
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cmd2 := []string{
+		"sh", "-c", fmt.Sprintf(
+			"chmod -R 777 /home && ls -la &&" +
+				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node1/babylond/config/app.toml && " + // disable the cache otherwise we go OOM
+				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node1/babylond/config/app.toml && " +
+				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node1/babylond/config/config.toml &&` +
+				"babylond start --home=/home/node1/babylond --rpc.pprof_laddr=0.0.0.0:6060",
+		),
+	}
+
+	time.Sleep(2 * time.Second) // todo(lazar): do a query on that file path to see if testnet cmd is done
+
+	resourceSecondNode, err := m.pool.RunWithOptions(
+		&dockertest.RunOptions{
+			Name:       babylondNode1ContainerName,
+			Repository: m.cfg.BabylonRepository,
+			Tag:        m.cfg.BabylonVersion,
+			Labels: map[string]string{
+				"e2e": "babylond",
+			},
+			User: "root:root",
+			Mounts: []string{
+				fmt.Sprintf("%s/:/home/", mounthPath),
+			},
+			ExposedPorts: []string{
+				"9090/tcp", // only expose what we need
+				"26657/tcp",
+				"6060/tcp",
+			},
+			Cmd: cmd2,
+		},
+		func(config *docker.HostConfig) {
+			config.PortBindings = map[docker.Port][]docker.PortBinding{
+				"9090/tcp":  {{HostIP: "", HostPort: "9091"}},
+				"26657/tcp": {{HostIP: "", HostPort: "26658"}},
+				"6060/tcp":  {{HostIP: "", HostPort: "6061"}},
+			}
+		},
+		noRestart,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = m.pool.Client.ConnectNetwork(network.ID, docker.NetworkConnectionOptions{
+		Container: resourceSecondNode.Container.ID,
+		EndpointConfig: &docker.EndpointConfig{
+			IPAMConfig: &docker.EndpointIPAMConfig{
+				IPv4Address: "192.168.10.3",
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	m.resources[babylondNode0ContainerName] = resourceFirstNode
+	m.resources[babylondNode1ContainerName] = resourceSecondNode
+
+	m.network = network
+
+	return resourceFirstNode, resourceSecondNode, nil
 }
 
 func (m *Manager) MemoryUsage(ctx context.Context, containerName string) (uint64, error) {
@@ -280,6 +367,10 @@ func (m *Manager) ClearResources() error {
 		if err := m.pool.Purge(resource); err != nil {
 			return err
 		}
+	}
+
+	if err := m.pool.Client.RemoveNetwork(m.network.ID); err != nil {
+		return err
 	}
 
 	return nil

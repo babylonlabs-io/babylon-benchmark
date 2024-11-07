@@ -87,7 +87,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 
 	fpis := make([]*FinalityProviderInstance, fpm.fpCount)
 
-	res, err := fpm.tm.BabylonClient.CurrentEpoch()
+	res, err := fpm.tm.BabylonClientNode0.CurrentEpoch()
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 	for i := 0; i < fpm.fpCount; i++ {
 		keyName := lib.GenRandomHexStr(r, 10)
 
-		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon.RPCAddr, fpm.tm.Config.Babylon.GRPCAddr)
+		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon0.RPCAddr, fpm.tm.Config.Babylon0.GRPCAddr)
 		if err != nil {
 			return err
 		}
@@ -385,7 +385,7 @@ func (fpi *FinalityProviderInstance) signFinalitySig(b *BlockInfo, btcPk *bbntyp
 	return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
 }
 
-// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon
+// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon0
 func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 	ctx context.Context,
 	fpPk *btcec.PublicKey,
@@ -427,7 +427,7 @@ func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 
 func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoch uint64) error {
 	err := lib.Eventually(ctx, func() bool {
-		lastFinalizedCkpt, err := fpm.tm.BabylonClient.LatestEpochFromStatus(ckpttypes.Finalized)
+		lastFinalizedCkpt, err := fpm.tm.BabylonClientNode0.LatestEpochFromStatus(ckpttypes.Finalized)
 		if err != nil {
 			return false
 		}

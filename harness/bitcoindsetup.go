@@ -38,13 +38,13 @@ func NewBitcoindHandler(manager *container.Manager) *BitcoindTestHandler {
 	}
 }
 
-func (h *BitcoindTestHandler) Start(ctx context.Context, containerName string) (*dockertest.Resource, error) {
+func (h *BitcoindTestHandler) Start(ctx context.Context) (*dockertest.Resource, error) {
 	tempPath, err := os.MkdirTemp("", "bbn-benchmark-test-*")
 	if err != nil {
 		return nil, err
 	}
 
-	bitcoinResource, err := h.m.RunBitcoindResource(containerName, tempPath)
+	bitcoinResource, err := h.m.RunBitcoindResource(tempPath)
 	if err != nil {
 		return nil, err
 	}
