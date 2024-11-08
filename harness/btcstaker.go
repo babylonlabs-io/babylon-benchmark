@@ -81,7 +81,10 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 				fmt.Printf("🚫 Err getting staking params %v\n", err)
 				continue
 			}
-			_ = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
+			err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
+			if err != nil {
+				fmt.Printf("🚫 Err in BTC Staker: %v\n", err)
+			}
 		}
 	}
 }

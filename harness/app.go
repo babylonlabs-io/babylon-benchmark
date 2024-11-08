@@ -36,20 +36,20 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	// bold text
 	fmt.Printf("🟢 Starting with \033[1m%d\033[0m stakers, \u001B[1m%d\u001B[0m finality providers.\n", numStakers, numFinalityProviders)
 
-	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
 	if err != nil {
 		return err
 	}
-	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
 	if err != nil {
 		return err
 	}
 
-	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon1.RPCAddr, tm.Config.Babylon1.GRPCAddr)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	go printStatsForever(ctx, tm, stopChan, cfg)
 
-	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon.RPCAddr, tm.Config.Babylon.GRPCAddr)
+	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struc
 				close(stopChan)
 			}
 
-			mem, err := tm.manger.MemoryUsage(ctx, "babylond")
+			mem, err := tm.manger.MemoryUsage(ctx, "babylond-node0")
 			if err != nil {
 				fmt.Printf("err getting memory usage for bbn node %v\n", err)
 			}

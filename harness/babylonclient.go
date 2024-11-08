@@ -72,7 +72,7 @@ func New(
 	cp := provider.(*cosmos.CosmosProvider)
 	cp.PCfg.KeyDirectory = cfg.KeyDirectory
 
-	// Create tmp Babylon app to retrieve and register codecs
+	// Create tmp Babylon0 app to retrieve and register codecs
 	// Need to override this manually as otherwise option from config is ignored
 	encCfg := bbn.GetEncodingConfig()
 	cp.Cdc = cosmos.Codec{
@@ -85,7 +85,7 @@ func New(
 	// initialise Cosmos provider
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
-	// connection with Babylon node
+	// connection with Babylon0 node
 	err = cp.Init(ctx)
 	if err != nil {
 		return nil, err
