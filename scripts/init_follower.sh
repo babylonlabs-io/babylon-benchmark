@@ -84,6 +84,10 @@ sed -i 's/timeout_commit = "5s"/timeout_commit = "30s"/' /root/.babylond/config/
 # Change pprof_laddr to 0.0.0.0:6060
 sed -i 's/^pprof_laddr = "localhost:6060"/pprof_laddr = "0.0.0.0:6060"/' /root/.babylond/config/config.toml
 
+# Disable iavl cache otherwise OOM
+sed -i 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /root/.babylond/config/app.toml
+sed -i 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /root/.babylond/config/app.toml
+
 echo "Follower Node Initialized with updated configuration."
 echo "Master Node ID: $MASTER_NODE_ID"
 echo "persistent_peers set to: $MASTER_NODE_ID@master-node:26656"

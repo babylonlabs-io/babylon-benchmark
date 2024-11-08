@@ -15,8 +15,8 @@ services:
     security_opt:
       - seccomp:unconfined
     environment:
-      - SNAPSHOT_FILE=devnet_0910.tar.gz
-      - RPC_URL=https://rpc.devnet.babylonchain.io
+      - SNAPSHOT_FILE=babylon.tar.gz
+      - RPC_URL=https://rpc.devnet.babylonlabs.io
     volumes:
       - ./scripts/init_master.sh:/scripts/init_master.sh
       - ./snapshots:/snapshots
@@ -46,7 +46,7 @@ services:
       babylond --home /root/.babylond start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
     environment:
-      - RPC_URL=https://rpc.devnet.babylonchain.io
+      - RPC_URL=https://rpc.devnet.babylonlabs.io
     volumes:
       - ./scripts/init_follower.sh:/scripts/init_follower.sh
       - ./babylond_data_follower:/root/.babylond
