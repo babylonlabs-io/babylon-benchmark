@@ -222,7 +222,7 @@ func (tm *TestManager) Stop() {
 		err := tm.BabylonClientNode0.Stop()
 		fmt.Printf("🚫 Rrr stopping client %v\n", err)
 
-		err = tm.BabylonClientNode0.Stop()
+		err = tm.BabylonClientNode1.Stop()
 		fmt.Printf("🚫 Rrr stopping client %v\n", err)
 	}
 
