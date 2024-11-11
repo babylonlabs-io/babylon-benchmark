@@ -23,25 +23,29 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
 	"sync/atomic"
 	"time"
 )
 
 type BTCStaker struct {
-	tm     *TestManager
-	client *SenderWithBabylonClient
-	fpPK   *btcec.PublicKey
+	tm             *TestManager
+	client         *SenderWithBabylonClient
+	fpPK           *btcec.PublicKey
+	fundingRequest chan sdk.AccAddress
 }
 
 func NewBTCStaker(
 	tm *TestManager,
 	client *SenderWithBabylonClient,
 	finalityProviderPublicKey *btcec.PublicKey,
+	fundingRequest chan sdk.AccAddress,
 ) *BTCStaker {
 	return &BTCStaker{
-		tm:     tm,
-		client: client,
-		fpPK:   finalityProviderPublicKey,
+		tm:             tm,
+		client:         client,
+		fpPK:           finalityProviderPublicKey,
+		fundingRequest: fundingRequest,
 	}
 }
 
@@ -83,7 +87,10 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 			}
 			err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 			if err != nil {
-				fmt.Printf("🚫 Err in BTC Staker: %v\n", err)
+				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
+				if strings.Contains(err.Error(), "Insufficient funds") {
+					s.fundingRequest <- s.client.BabylonAddress
+				}
 			}
 		}
 	}
@@ -293,7 +300,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 	txHash *chainhash.Hash,
 	requiredDepth uint32,
 ) *bstypes.InclusionProof {
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 
 	for {

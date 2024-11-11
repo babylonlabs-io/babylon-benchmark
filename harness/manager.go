@@ -24,6 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
 	"time"
@@ -76,6 +77,7 @@ type TestManager struct {
 	manger             *container.Manager
 	babylonDir         string
 	benchConfig        benchcfg.Config
+	fundingRequests    chan sdk.AccAddress
 }
 
 // StartManager creates a test manager
@@ -214,6 +216,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		manger:             manager,
 		babylonDir:         babylonDir,
 		benchConfig:        runCfg,
+		fundingRequests:    make(chan sdk.AccAddress),
 	}, nil
 }
 
@@ -344,7 +347,7 @@ func (tm *TestManager) fundAllParties(
 	var msgs []sdk.Msg
 
 	for _, sender := range senders {
-		msg := banktypes.NewMsgSend(fundingAddress, sender.BabylonAddress, types.NewCoins(types.NewInt64Coin("ubbn", 100000000)))
+		msg := banktypes.NewMsgSend(fundingAddress, sender.BabylonAddress, types.NewCoins(types.NewInt64Coin("ubbn", 100_000_000)))
 		msgs = append(msgs, msg)
 	}
 
@@ -359,6 +362,38 @@ func (tm *TestManager) fundAllParties(
 	}
 	if resp == nil {
 		return fmt.Errorf("resp fund parties empty")
+	}
+
+	return nil
+}
+func (tm *TestManager) fundBnnAddress(
+	ctx context.Context,
+	addr sdk.AccAddress,
+) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context error before funding: %w", err)
+	}
+
+	fundingAccount := tm.BabylonClientNode0.MustGetAddr()
+	fundingAddress, err := sdk.AccAddressFromBech32(fundingAccount)
+	if err != nil {
+		return fmt.Errorf("failed to parse funding address: %w", err)
+	}
+
+	amount := types.NewCoins(types.NewInt64Coin("ubbn", 100_000_000))
+	msg := banktypes.NewMsgSend(fundingAddress, addr, amount)
+
+	resp, err := tm.BabylonClientNode0.ReliablySendMsg(ctx, msg, nil, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send fund transaction: %w", err)
+	}
+
+	if resp == nil {
+		return fmt.Errorf("transaction response is nil")
+	}
+
+	if resp.Code != 0 {
+		return fmt.Errorf("funding transaction failed with code %d", resp.Code)
 	}
 
 	return nil
@@ -387,4 +422,65 @@ func (tm *TestManager) listBlocksForever(ctx context.Context) {
 			fmt.Printf("🔎 Found %d non-finalized block(s). Next block to finalize: %d\n", len(resp.Blocks), resp.Blocks[0].Height)
 		}
 	}
+}
+
+func (tm *TestManager) fundForever(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case addr := <-tm.fundingRequests:
+			if err := tm.fundBnnAddress(ctx, addr); err != nil {
+				fmt.Printf("🚫 Failed to fund addr %s, err %v\n", addr.String(), err)
+			}
+		}
+	}
+}
+
+func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
+	const (
+		batchSize     = 25
+		batchInterval = 2 * time.Second
+	)
+
+	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
+		len(stakers), batchSize, batchInterval)
+
+	start := time.Now()
+	var g errgroup.Group
+	for i := 0; i < len(stakers); i += batchSize {
+		end := i + batchSize
+		if end > len(stakers) {
+			end = len(stakers)
+		}
+		batch := stakers[i:end]
+
+		g.Go(func() error {
+			return startBatch(ctx, batch)
+		})
+
+		// Wait before starting the next batch, unless it's the last batch
+		if end < len(stakers) {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(batchInterval):
+			}
+		}
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
+
+	return g.Wait()
+}
+
+func startBatch(ctx context.Context, batch []*BTCStaker) error {
+	var g errgroup.Group
+	for _, staker := range batch {
+		g.Go(func() error {
+			return staker.Start(ctx)
+		})
+	}
+	return g.Wait()
 }
