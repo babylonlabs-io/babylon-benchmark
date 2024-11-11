@@ -78,6 +78,7 @@ type TestManager struct {
 	babylonDir         string
 	benchConfig        benchcfg.Config
 	fundingRequests    chan sdk.AccAddress
+	fundingAddress     sdk.AccAddress
 }
 
 // StartManager creates a test manager
@@ -206,6 +207,10 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	if err != nil {
 		return nil, err
 	}
+
+	fundingAccount := babylonClientNode0.MustGetAddr()
+	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
+
 	return &TestManager{
 		TestRpcClient:      testRpcClient,
 		BabylonClientNode0: babylonClientNode0,
@@ -217,6 +222,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		babylonDir:         babylonDir,
 		benchConfig:        runCfg,
 		fundingRequests:    make(chan sdk.AccAddress, 100),
+		fundingAddress:     fundingAddress,
 	}, nil
 }
 
