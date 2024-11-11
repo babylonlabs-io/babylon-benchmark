@@ -76,7 +76,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	vig := NewSubReporter(tm, vigilanteSender)
 	vig.Start(ctx)
 
-	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), numFinalityProviders, fpMgrHome, eotsDir) // todo(lazar); fp count cfg
+	fpMgr := NewFinalityProviderManager(tm, fpmSender, zap.NewNop(), numFinalityProviders, fpMgrHome, eotsDir)
 	if err = fpMgr.Initialize(ctx, cfg.NumPubRand); err != nil {
 		return err
 	}
@@ -87,21 +87,20 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		if err != nil {
 			return err
 		}
-		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK()))
+		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests))
 	}
+
+	// periodically check if we need to fund the staker
+	go tm.fundForever(ctx)
 
 	// fund all stakers
 	if err := tm.fundAllParties(ctx, senders(stakers)); err != nil {
 		return err
 	}
 
-	// start stakers and defer stops
-	// TODO(lazar): Ideally stakers would start on different times to reduce contention
-	// on funding BTC wallet
-	for _, staker := range stakers {
-		if err := staker.Start(ctx); err != nil {
-			return err
-		}
+	// start stakers
+	if err := startStakersInBatches(ctx, stakers); err != nil {
+		return err
 	}
 
 	go printStatsForever(ctx, tm, stopChan, cfg)

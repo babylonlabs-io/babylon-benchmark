@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/avast/retry-go/v4"
+	"github.com/babylonlabs-io/babylon/app/params"
 	"math/rand"
+	"sync"
 	"time"
 
 	bbn "github.com/babylonlabs-io/babylon/app"
@@ -32,6 +34,18 @@ var (
 	RtyErr    = retry.LastErrorOnly(true)
 )
 
+var (
+	once   sync.Once
+	encCfg *params.EncodingConfig
+)
+
+func getEncodingConfig() *params.EncodingConfig {
+	once.Do(func() {
+		encCfg = bbn.GetEncodingConfig()
+	})
+	return encCfg
+}
+
 type Client struct {
 	*query.QueryClient
 
@@ -47,6 +61,7 @@ func New(
 		zapLogger *zap.Logger
 		err       error
 	)
+	getEncodingConfig()
 
 	// ensure cfg is valid
 	if err := cfg.Validate(); err != nil {
@@ -74,7 +89,7 @@ func New(
 
 	// Create tmp Babylon0 app to retrieve and register codecs
 	// Need to override this manually as otherwise option from config is ignored
-	encCfg := bbn.GetEncodingConfig()
+
 	cp.Cdc = cosmos.Codec{
 		InterfaceRegistry: encCfg.InterfaceRegistry,
 		Marshaler:         encCfg.Codec,
