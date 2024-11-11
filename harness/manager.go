@@ -216,7 +216,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		manger:             manager,
 		babylonDir:         babylonDir,
 		benchConfig:        runCfg,
-		fundingRequests:    make(chan sdk.AccAddress),
+		fundingRequests:    make(chan sdk.AccAddress, 100),
 	}, nil
 }
 
@@ -366,6 +366,7 @@ func (tm *TestManager) fundAllParties(
 
 	return nil
 }
+
 func (tm *TestManager) fundBnnAddress(
 	ctx context.Context,
 	addr sdk.AccAddress,
@@ -425,14 +426,19 @@ func (tm *TestManager) listBlocksForever(ctx context.Context) {
 }
 
 func (tm *TestManager) fundForever(ctx context.Context) {
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
 		case addr := <-tm.fundingRequests:
-			if err := tm.fundBnnAddress(ctx, addr); err != nil {
-				fmt.Printf("🚫 Failed to fund addr %s, err %v\n", addr.String(), err)
-			}
+			go func() {
+				if err := tm.fundBnnAddress(ctx, addr); err != nil {
+					fmt.Printf("🚫 Failed to fund addr %s, err %v\n", addr.String(), err)
+				}
+			}()
 		}
 	}
 }

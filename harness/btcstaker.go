@@ -88,8 +88,13 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 			err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 			if err != nil {
 				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
-				if strings.Contains(err.Error(), "Insufficient funds") {
-					s.fundingRequest <- s.client.BabylonAddress
+				if strings.Contains(strings.ToLower(err.Error()), "insufficient funds") {
+					select {
+					case s.fundingRequest <- s.client.BabylonAddress:
+						time.Sleep(5 * time.Second)
+					default:
+						fmt.Println("fundingRequest channel is full or closed")
+					}
 				}
 			}
 		}

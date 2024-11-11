@@ -90,6 +90,9 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests))
 	}
 
+	// periodically check if we need to fund the staker
+	go tm.fundForever(ctx)
+
 	// fund all stakers
 	if err := tm.fundAllParties(ctx, senders(stakers)); err != nil {
 		return err
@@ -117,7 +120,6 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	fpMgr.Start(ctx)
 
 	go tm.listBlocksForever(ctx)
-	go tm.fundForever(ctx)
 
 	select {
 	case <-ctx.Done():
