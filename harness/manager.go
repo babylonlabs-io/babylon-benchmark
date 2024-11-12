@@ -78,6 +78,7 @@ type TestManager struct {
 	babylonDir         string
 	benchConfig        benchcfg.Config
 	fundingRequests    chan sdk.AccAddress
+	fundingAddress     sdk.AccAddress
 }
 
 // StartManager creates a test manager
@@ -206,6 +207,10 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	if err != nil {
 		return nil, err
 	}
+
+	fundingAccount := babylonClientNode0.MustGetAddr()
+	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
+
 	return &TestManager{
 		TestRpcClient:      testRpcClient,
 		BabylonClientNode0: babylonClientNode0,
@@ -217,6 +222,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		babylonDir:         babylonDir,
 		benchConfig:        runCfg,
 		fundingRequests:    make(chan sdk.AccAddress, 100),
+		fundingAddress:     fundingAddress,
 	}, nil
 }
 
@@ -340,15 +346,19 @@ func (tm *TestManager) fundAllParties(
 	ctx context.Context,
 	senders []*SenderWithBabylonClient,
 ) error {
-
-	fundingAccount := tm.BabylonClientNode0.MustGetAddr()
-	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
-
-	var msgs []sdk.Msg
+	msgs := make([]sdk.Msg, 0, len(senders))
 
 	for _, sender := range senders {
-		msg := banktypes.NewMsgSend(fundingAddress, sender.BabylonAddress, types.NewCoins(types.NewInt64Coin("ubbn", 100_000_000)))
+		msg := banktypes.NewMsgSend(
+			tm.fundingAddress,
+			sender.BabylonAddress,
+			types.NewCoins(types.NewInt64Coin("ubbn", 100_000_000)),
+		)
 		msgs = append(msgs, msg)
+	}
+
+	if ctx.Err() != nil {
+		return fmt.Errorf("context error: %w", ctx.Err())
 	}
 
 	resp, err := tm.BabylonClientNode0.ReliablySendMsgs(
