@@ -30,11 +30,22 @@ apt-get install -y \
     lsof \
     jq
 
-# Fetch the genesis file from remote RPC and store it temporarily
-echo "Fetching genesis file from $RPC_URL"
-GENESIS_TEMP=$(curl -s "$RPC_URL/genesis" | jq '.result.genesis')
+# Load genesis from a local file or fetch from RPC as before
+if [ -n "$GENESIS_PATH" ]; then
+    echo "Loading genesis file from $GENESIS_PATH"
+    if [ -f "$GENESIS_PATH" ]; then
+        GENESIS_TEMP=$(jq '.' "$GENESIS_PATH")
+    else
+        echo "Error: File not found at $GENESIS_PATH"
+        exit 1
+    fi
+else
+    echo "Fetching genesis file from $RPC_URL"
+    GENESIS_TEMP=$(curl -s "$RPC_URL/genesis" | jq '.result.genesis')
+fi
+
 if [ -z "$GENESIS_TEMP" ]; then
-    echo "Error: Failed to fetch genesis file"
+    echo "Error: Failed to load genesis"
     exit 1
 fi
 
