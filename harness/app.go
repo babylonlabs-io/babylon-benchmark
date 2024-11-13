@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	delegationsSentCounter int32
+	delegationsSentCounter  int32
+	totalDelegationExecTime int64
 )
 
 func Run(ctx context.Context, cfg config.Config) error {
@@ -158,6 +159,7 @@ func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struc
 			delegationsPerSecond := float64(currentSent-prevSent) / now.Sub(prevTime).Seconds()
 			fmt.Printf("📄 Delegations sent: %d, rate: %.2f delegations/sec, ts: %s, mem: %d MB\n",
 				currentSent, delegationsPerSecond, now.Format(time.UnixDate), mem/1e6)
+			fmt.Printf("⏱️ Average delegation submission time: %.4f seconds\n", avgExecutionTime())
 
 			prevSent = currentSent
 			prevTime = now
@@ -165,4 +167,16 @@ func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struc
 			return
 		}
 	}
+}
+
+// avgExecutionTime calculates the average execution time in seconds
+func avgExecutionTime() float64 {
+	totalTime := atomic.LoadInt64(&totalDelegationExecTime)
+	count := atomic.LoadInt32(&delegationsSentCounter)
+
+	if count == 0 {
+		return 0
+	}
+
+	return float64(totalTime) / float64(count) / 1e9
 }
