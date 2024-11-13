@@ -24,7 +24,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	numStakers := cfg.TotalStakers
 	numFinalityProviders := cfg.TotalFinalityProviders
-	const numMatureOutputs = uint32(500)
+	const numMatureOutputs = uint32(1500)
 	stopChan := make(chan struct{}) // for stopping when we reach totalDelegations
 
 	tm, err := StartManager(ctx, numMatureOutputs, 5, cfg)
@@ -87,7 +87,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		if err != nil {
 			return err
 		}
-		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests))
+		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests, tm.fundingResponse))
 	}
 
 	// periodically check if we need to fund the staker

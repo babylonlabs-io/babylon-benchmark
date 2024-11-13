@@ -29,10 +29,11 @@ import (
 )
 
 type BTCStaker struct {
-	tm             *TestManager
-	client         *SenderWithBabylonClient
-	fpPK           *btcec.PublicKey
-	fundingRequest chan sdk.AccAddress
+	tm              *TestManager
+	client          *SenderWithBabylonClient
+	fpPK            *btcec.PublicKey
+	fundingRequest  chan sdk.AccAddress
+	fundingResponse chan sdk.AccAddress
 }
 
 func NewBTCStaker(
@@ -40,12 +41,14 @@ func NewBTCStaker(
 	client *SenderWithBabylonClient,
 	finalityProviderPublicKey *btcec.PublicKey,
 	fundingRequest chan sdk.AccAddress,
+	fundingResponse chan sdk.AccAddress,
 ) *BTCStaker {
 	return &BTCStaker{
-		tm:             tm,
-		client:         client,
-		fpPK:           finalityProviderPublicKey,
-		fundingRequest: fundingRequest,
+		tm:              tm,
+		client:          client,
+		fpPK:            finalityProviderPublicKey,
+		fundingRequest:  fundingRequest,
+		fundingResponse: fundingResponse,
 	}
 }
 
@@ -88,16 +91,41 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 			err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
 			if err != nil {
 				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
+
 				if strings.Contains(strings.ToLower(err.Error()), "insufficient funds") {
-					select {
-					case s.fundingRequest <- s.client.BabylonAddress:
-						time.Sleep(5 * time.Second)
-					default:
-						fmt.Println("fundingRequest channel is full or closed")
+					if s.requestFunding(ctx) {
+						fmt.Printf("✅ Received funding for %s\n", s.client.BabylonAddress.String())
+					} else {
+						fmt.Printf("🚫 Funding timeout or context canceled for %s\n", s.client.BabylonAddress.String())
 					}
 				}
 			}
 		}
+	}
+}
+
+// Helper function to request funding and wait for a response
+func (s *BTCStaker) requestFunding(ctx context.Context) bool {
+	// Attempt to send a funding request with a timeout
+	select {
+	case s.fundingRequest <- s.client.BabylonAddress:
+		fmt.Printf("📤 Funding requested for %s\n", s.client.BabylonAddress.String())
+	case <-ctx.Done():
+		return false
+	case <-time.After(5 * time.Second):
+		fmt.Println("⚠️ Funding request channel is full or unresponsive")
+		return false
+	}
+
+	// Wait for funding response or timeout
+	waitCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
+	select {
+	case <-waitCtx.Done():
+		return false
+	case addr := <-s.fundingResponse:
+		return addr.String() == s.client.BabylonAddress.String()
 	}
 }
 
