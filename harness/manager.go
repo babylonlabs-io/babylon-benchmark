@@ -78,6 +78,7 @@ type TestManager struct {
 	babylonDir         string
 	benchConfig        benchcfg.Config
 	fundingRequests    chan sdk.AccAddress
+	fundingResponse    chan sdk.AccAddress
 	fundingAddress     sdk.AccAddress
 }
 
@@ -221,7 +222,8 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		manger:             manager,
 		babylonDir:         babylonDir,
 		benchConfig:        runCfg,
-		fundingRequests:    make(chan sdk.AccAddress, 100),
+		fundingRequests:    make(chan sdk.AccAddress, 250),
+		fundingResponse:    make(chan sdk.AccAddress, 250),
 		fundingAddress:     fundingAddress,
 	}, nil
 }
@@ -385,14 +387,8 @@ func (tm *TestManager) fundBnnAddress(
 		return fmt.Errorf("context error before funding: %w", err)
 	}
 
-	fundingAccount := tm.BabylonClientNode0.MustGetAddr()
-	fundingAddress, err := sdk.AccAddressFromBech32(fundingAccount)
-	if err != nil {
-		return fmt.Errorf("failed to parse funding address: %w", err)
-	}
-
 	amount := types.NewCoins(types.NewInt64Coin("ubbn", 100_000_000))
-	msg := banktypes.NewMsgSend(fundingAddress, addr, amount)
+	msg := banktypes.NewMsgSend(tm.fundingAddress, addr, amount)
 
 	resp, err := tm.BabylonClientNode0.ReliablySendMsg(ctx, msg, nil, nil)
 	if err != nil {

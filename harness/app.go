@@ -87,7 +87,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		if err != nil {
 			return err
 		}
-		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests))
+		stakers = append(stakers, NewBTCStaker(tm, stakerSender, fpMgr.randomFp().btcPk.MustToBTCPK(), tm.fundingRequests, tm.fundingResponse))
 	}
 
 	// periodically check if we need to fund the staker
