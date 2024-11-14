@@ -5,8 +5,10 @@ services:
     image: "babylonlabs-io/babylond" 
     container_name: master-node
     user: root # run as root as we need to install some packages in init scripts
+    # we need to sleep because docker needs time to bind a big volume
     command: >
       bash -c "
+      sleep 5 && 
       bash /scripts/init_master.sh &&
       babylond --home /root/.babylond  start --x-crisis-skip-assert-invariants --log_format 'plain' 2>&1 | tee /root/.babylond/babylond.log
       "
