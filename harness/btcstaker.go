@@ -560,6 +560,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		DelegatorUnbondingSlashingSig: unbondingSlashingSig,
 	}
 
+	start := time.Now()
 	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel})
 	if err != nil {
 		return err
@@ -567,8 +568,10 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	if resp == nil {
 		return fmt.Errorf("resp from send msg is nil %v", msgBTCDel)
 	}
+	elapsed := time.Since(start)
 
 	atomic.AddInt32(&delegationsSentCounter, 1)
+	atomic.AddInt64(&totalDelegationExecTime, elapsed.Nanoseconds())
 
 	return nil
 }
