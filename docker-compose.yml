@@ -19,7 +19,7 @@ services:
     environment:
       - SNAPSHOT_FILE=babylon.tar.gz
       - RPC_URL=https://rpc.devnet.babylonlabs.io
-      - GENESIS_PATH=""
+      - GENESIS_PATH=
     volumes:
       - ./scripts/init_master.sh:/scripts/init_master.sh
       - ./snapshots:/snapshots
@@ -50,10 +50,11 @@ services:
       "
     environment:
       - RPC_URL=https://rpc.devnet.babylonlabs.io
-      - GENESIS_PATH=""
+      - GENESIS_PATH=
     volumes:
       - ./scripts/init_follower.sh:/scripts/init_follower.sh
       - ./babylond_data_follower:/root/.babylond
+      - ./snapshots:/snapshots # convenient to put genesis.json here
     ports:
       - "26658:26656"    # Tendermint RPC for follower
       - "26667:26657"    # Tendermint P2P for follower
