@@ -317,7 +317,6 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	tx := wire.NewMsgTx(2)
 	tx.AddTxOut(stakingOutput)
 
-	// todo(lazar): investigate if we can push this more, currently max ~50txs/block
 	lock := true
 	rawTxResult, err := tm.TestRpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
 		FeeRate:        &feeRate,

@@ -117,8 +117,9 @@ func (s *BTCStaker) requestFunding(ctx context.Context) bool {
 		return false
 	}
 
-	// Wait for funding response or timeout
-	waitCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	// Wait for funding response or timeout.
+	// Long time out needed, once we hit over 200k delegations, this takes more than a minute
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	select {
@@ -397,7 +398,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	unbondingTime := uint16(100)
 	covKeys, err := bbnPksToBtcPks(params.CovenantPks)
 	if err != nil {
-		return err
+		return fmt.Errorf("err bbnPksToBtcPks: %w", err)
 	}
 
 	stakingInfo, err := staking.BuildStakingInfo(
@@ -410,14 +411,13 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		regtestParams,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("err BuildStakingInfo: %w", err)
 	}
 
 	stakingTx, hash, err := s.tm.AtomicFundSignSendStakingTx(stakingInfo.StakingOutput)
 	if err != nil {
-		return err
+		return fmt.Errorf("err AtomicFundSignSendStakingTx: %w", err)
 	}
-	//fmt.Printf("send staking tx with hash %s \n", hash)
 
 	// TODO: hardcoded two in tests
 	inclusionProof := s.waitForTransactionConfirmation(ctx, hash, 2)
@@ -427,13 +427,11 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		return fmt.Errorf("empty inclusion proof")
 	}
 
-	//fmt.Printf("staking tx confirmed with hash %s \n", hash)
-
 	unbondingTxValue := params.MinStakingValueSat - params.UnbondingFeeSat
 
 	serializedStakingTx, err := bbntypes.SerializeBTCTx(stakingTx)
 	if err != nil {
-		return err
+		return fmt.Errorf("err staking SerializeBTCTx %w", err)
 	}
 
 	unbondingTx := wire.NewMsgTx(2)
@@ -454,13 +452,13 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("err BuildUnbondingInfo: %w", err)
 	}
 	unbondingTx.AddTxOut(unbondingInfo.UnbondingOutput)
 
 	serializedUnbondingTx, err := bbntypes.SerializeBTCTx(unbondingTx)
 	if err != nil {
-		return err
+		return fmt.Errorf("err unbonding SerializeBTCTx %w", err)
 	}
 
 	// build slashing for staking and unbondidn
@@ -475,12 +473,12 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		regtestParams,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("err BuildSlashingTxFromStakingTxStrict %w", err)
 	}
 
 	stakingSlashingPath, err := stakingInfo.SlashingPathSpendInfo()
 	if err != nil {
-		return err
+		return fmt.Errorf("err SlashingPathSpendInfo %w", err)
 	}
 
 	unbondingSlashing, err := staking.BuildSlashingTxFromStakingTxStrict(
@@ -494,11 +492,11 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		regtestParams,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("err BuildSlashingTxFromStakingTxStrict %w", err)
 	}
 	unbondingSlashingPath, err := unbondingInfo.SlashingPathSpendInfo()
 	if err != nil {
-		return err
+		return fmt.Errorf("err SlashingPathSpendInfo %w", err)
 	}
 
 	signStakingSlashingRes, err := s.SignOneInputTaprootSpendingTransaction(stakerPk, &TaprootSigningRequest{
@@ -510,7 +508,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		},
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("err SignOneInputTaprootSpendingTransaction %w", err)
 	}
 
 	signUnbondingSlashingRes, err := s.SignOneInputTaprootSpendingTransaction(stakerPk, &TaprootSigningRequest{
@@ -522,23 +520,23 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		},
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("err SignOneInputTaprootSpendingTransaction %w", err)
 	}
 
 	stakingSlashingTx, err := bbntypes.SerializeBTCTx(stakingSlashing)
 	if err != nil {
-		return err
+		return fmt.Errorf("err staking SerializeBTCTx %w", err)
 	}
 	stakingSlashingSig := bbntypes.NewBIP340SignatureFromBTCSig(signStakingSlashingRes.Signature)
 	unbondingSlashingTx, err := bbntypes.SerializeBTCTx(unbondingSlashing)
 	if err != nil {
-		return err
+		return fmt.Errorf("err unbonding SerializeBTCTx %w", err)
 	}
 	unbondingSlashingSig := bbntypes.NewBIP340SignatureFromBTCSig(signUnbondingSlashingRes.Signature)
 
 	pop, err := s.signBip322NativeSegwit(stakerAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("err signBip322NativeSegwit %w", err)
 	}
 
 	msgBTCDel := &bstypes.MsgCreateBTCDelegation{
@@ -563,7 +561,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	start := time.Now()
 	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel})
 	if err != nil {
-		return err
+		return fmt.Errorf("err sending MsgCreateBTCDelegation %w", err)
 	}
 	if resp == nil {
 		return fmt.Errorf("resp from send msg is nil %v", msgBTCDel)
