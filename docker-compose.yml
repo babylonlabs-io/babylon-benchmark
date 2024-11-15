@@ -27,6 +27,7 @@ services:
     ports:
       - "26656:26656"    # Tendermint RPC
       - "26657:26657"    # Tendermint P2P
+      - "26660:26660"    # Prometheus metrics
       - "1317:1317"      # REST API
       - "9090:9090"      # gRPC
       - "2345:2345"      # Debugging
@@ -58,6 +59,7 @@ services:
     ports:
       - "26658:26656"    # Tendermint RPC for follower
       - "26667:26657"    # Tendermint P2P for follower
+      - "26661:26660"    # Prometheus metrics
       - "1318:1317"      # REST API for follower
       - "9091:9090"      # gRPC for follower
       - "2346:2345"      # Debugging for follower
