@@ -97,6 +97,9 @@ sed -i 's/network = "mainnet"/network = "signet"/' /root/.babylond/config/app.to
 # Increase timeout_commit to 30s in config.toml
 sed -i 's/timeout_commit = "5s"/timeout_commit = "30s"/' /root/.babylond/config/config.toml
 
+# Enable metrics
+sed -i 's/prometheus = false/prometheus = true/' /root/.babylond/config/config.toml
+
 # Disable iavl cache otherwise OOM
 sed -i 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /root/.babylond/config/app.toml
 sed -i 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /root/.babylond/config/app.toml
