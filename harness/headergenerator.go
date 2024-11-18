@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"slices"
 )
 
 type BTCHeaderGenerator struct {
@@ -33,7 +34,7 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 	}
 	btclcHeight := tipResp.Header.Height
 
-	var headers []*wire.BlockHeader
+	headers := make([]*wire.BlockHeader, 0, btcHeight)
 	for i := int(btclcHeight + 1); i <= int(btcHeight); i++ {
 		hash, err := s.tm.TestRpcClient.GetBlockHash(int64(i))
 		if err != nil {
@@ -46,9 +47,10 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 		headers = append(headers, header)
 	}
 
-	_, err = s.client.InsertBTCHeadersToBabylon(ctx, headers)
-	if err != nil {
-		return err
+	for headersChunk := range slices.Chunk(headers, 1500) {
+		if _, err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
+			return err
+		}
 	}
 
 	return nil
