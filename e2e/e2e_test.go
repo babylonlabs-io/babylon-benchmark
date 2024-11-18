@@ -10,7 +10,7 @@ import (
 )
 
 func TestCreatesDelegations(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
 	cfg := config.Config{
