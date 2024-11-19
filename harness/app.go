@@ -25,7 +25,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	numStakers := cfg.TotalStakers
 	numFinalityProviders := cfg.TotalFinalityProviders
-	const numMatureOutputs = uint32(1500)
+	const numMatureOutputs = uint32(6000)
 	stopChan := make(chan struct{}) // for stopping when we reach totalDelegations
 
 	tm, err := StartManager(ctx, numMatureOutputs, 5, cfg)

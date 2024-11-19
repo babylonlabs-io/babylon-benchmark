@@ -197,7 +197,7 @@ func ToProviderMsgs(msgs []sdk.Msg) []pv.RelayerMessage {
 }
 
 func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
-	var headersBytes []bbntypes.BTCHeaderBytes
+	headersBytes := make([]bbntypes.BTCHeaderBytes, 0, len(headers))
 
 	for _, h := range headers {
 		headersBytes = append(headersBytes, bbntypes.NewBTCHeaderBytesFromBlockHeader(h))

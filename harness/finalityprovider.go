@@ -600,6 +600,5 @@ func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Contex
 		if err = fpi.submitFinalitySignature(ctx, blocks); err != nil {
 			fmt.Printf("🚫 Err submitting fin signature: %v\n", err)
 		}
-
 	}
 }

@@ -88,11 +88,10 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 				fmt.Printf("🚫 Err getting staking params %v\n", err)
 				continue
 			}
-			err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params)
-			if err != nil {
-				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
 
-				if strings.Contains(strings.ToLower(err.Error()), "insufficient funds") {
+			if err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params); err != nil {
+				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
+				if strings.Contains(err.Error(), "insufficient funds") {
 					if s.requestFunding(ctx) {
 						fmt.Printf("✅ Received funding for %s\n", s.client.BabylonAddress.String())
 					} else {
