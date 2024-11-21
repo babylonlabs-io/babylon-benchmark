@@ -48,11 +48,7 @@ func getEncodingConfig() *params.EncodingConfig {
 
 type Client struct {
 	*query.QueryClient
-
 	provider *cosmos.CosmosProvider
-	timeout  time.Duration
-	logger   *zap.Logger
-	cfg      *config.BabylonConfig
 }
 
 func New(
@@ -85,7 +81,7 @@ func New(
 	}
 
 	cp := provider.(*cosmos.CosmosProvider)
-	cp.PCfg.KeyDirectory = cfg.KeyDirectory
+	//cp.PCfg.KeyDirectory = cfg.KeyDirectory
 
 	// Create tmp Babylon0 app to retrieve and register codecs
 	// Need to override this manually as otherwise option from config is ignored
@@ -101,8 +97,7 @@ func New(
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
 	// connection with Babylon0 node
-	err = cp.Init(ctx)
-	if err != nil {
+	if err = cp.Init(ctx); err != nil {
 		return nil, err
 	}
 
@@ -122,9 +117,6 @@ func New(
 	return &Client{
 		queryClient,
 		cp,
-		cfg.Timeout,
-		zapLogger,
-		cfg,
 	}, nil
 }
 
