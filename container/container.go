@@ -224,8 +224,8 @@ func (m *Manager) RunBabylondResource(
 				"--covenant-quorum=1 --covenant-pks=%s "+
 				"--min-signed-per-window=0 && "+ // never jail sluggish fps
 				"chmod -R 777 /home && "+
-				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node0/babylond/config/app.toml && "+ // disable the cache otherwise we go OOM
-				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node0/babylond/config/app.toml && "+
+				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 50000/' /home/node0/babylond/config/app.toml && "+ // disable the cache otherwise we go OOM
+				//"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node0/babylond/config/app.toml && "+
 				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node0/babylond/config/config.toml &&`+
 				"babylond start --home=/home/node0/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 			epochInterval, slashingPkScript, baseHeaderHex, bbn.NewBIP340PubKeyFromBTCPK(CovenantPubKey).MarshalHex()),
@@ -279,8 +279,8 @@ func (m *Manager) RunBabylondResource(
 	cmd2 := []string{
 		"sh", "-c", fmt.Sprintf(
 			"chmod -R 777 /home && ls -la &&" +
-				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 0/' /home/node1/babylond/config/app.toml && " + // disable the cache otherwise we go OOM
-				"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node1/babylond/config/app.toml && " +
+				"sed -i -e 's/iavl-cache-size = 781250/iavl-cache-size = 50000/' /home/node1/babylond/config/app.toml && " + // disable the cache otherwise we go OOM
+				//"sed -i -e 's/iavl-disable-fastnode = false/iavl-disable-fastnode = true/' /home/node1/babylond/config/app.toml && " +
 				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node1/babylond/config/config.toml &&` +
 				"babylond start --home=/home/node1/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 		),
