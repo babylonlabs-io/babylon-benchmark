@@ -469,10 +469,32 @@ func (fpi *FinalityProviderInstance) hasVotingPower(ctx context.Context, b *Bloc
 	return true, nil
 }
 
-func (fpm *FinalityProviderManager) randomFp() *FinalityProviderInstance {
-	randomIndex := r.Intn(len(fpm.finalityProviders))
+func (fpm *FinalityProviderManager) getRandomChunk(chunkSize int) []*btcec.PublicKey {
+	if len(fpm.finalityProviders) == 0 {
+		return []*btcec.PublicKey{}
+	}
 
-	return fpm.finalityProviders[randomIndex]
+	if chunkSize >= len(fpm.finalityProviders) || len(fpm.finalityProviders) == 1 {
+		return fpiToBtcPks(fpm.finalityProviders)
+	}
+
+	r.Seed(time.Now().UnixNano())
+
+	startIndex := r.Intn(len(fpm.finalityProviders) - chunkSize + 1)
+
+	chunk := fpm.finalityProviders[startIndex : startIndex+chunkSize]
+
+	return fpiToBtcPks(chunk)
+}
+
+func fpiToBtcPks(fpi []*FinalityProviderInstance) []*btcec.PublicKey {
+	fpPKs := make([]*btcec.PublicKey, 0, len(fpi))
+
+	for _, fp := range fpi {
+		fpPKs = append(fpPKs, fp.btcPk.MustToBTCPK())
+	}
+
+	return fpPKs
 }
 
 func (fpm *FinalityProviderManager) queryFinalizedBlockForever(ctx context.Context) {
@@ -582,6 +604,7 @@ func (fpi *FinalityProviderInstance) submitFinalitySigForever(ctx context.Contex
 			}
 
 			if !hasVp {
+				time.Sleep(500 * time.Millisecond)
 				continue
 			}
 

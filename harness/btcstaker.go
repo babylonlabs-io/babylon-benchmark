@@ -32,6 +32,7 @@ type BTCStaker struct {
 	tm              *TestManager
 	client          *SenderWithBabylonClient
 	fpPK            *btcec.PublicKey
+	fpPKChunk       []*btcec.PublicKey
 	fundingRequest  chan sdk.AccAddress
 	fundingResponse chan sdk.AccAddress
 }
@@ -39,14 +40,14 @@ type BTCStaker struct {
 func NewBTCStaker(
 	tm *TestManager,
 	client *SenderWithBabylonClient,
-	finalityProviderPublicKey *btcec.PublicKey,
+	finalityProvidersPublicKey []*btcec.PublicKey,
 	fundingRequest chan sdk.AccAddress,
 	fundingResponse chan sdk.AccAddress,
 ) *BTCStaker {
 	return &BTCStaker{
 		tm:              tm,
 		client:          client,
-		fpPK:            finalityProviderPublicKey,
+		fpPKChunk:       finalityProvidersPublicKey,
 		fundingRequest:  fundingRequest,
 		fundingResponse: fundingResponse,
 	}
@@ -88,6 +89,9 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 				fmt.Printf("🚫 Err getting staking params %v\n", err)
 				continue
 			}
+
+			// each round rnd FP to delegate
+			s.fpPK = s.randomFpPK()
 
 			if err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params); err != nil {
 				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
@@ -583,4 +587,11 @@ func bbnPksToBtcPks(pks []bbn.BIP340PubKey) ([]*btcec.PublicKey, error) {
 		btcPks = append(btcPks, btcPk)
 	}
 	return btcPks, nil
+}
+
+func (s *BTCStaker) randomFpPK() *btcec.PublicKey {
+	r.Seed(time.Now().UnixNano())
+	randomIndex := r.Intn(len(s.fpPKChunk))
+
+	return s.fpPKChunk[randomIndex]
 }
