@@ -13,6 +13,8 @@ const (
 	babylonPathFlag      = "babylon-path"
 	totalDelegationsFlag = "total-delegations"
 	numPubRandFlag       = "num-public-randomness"
+	iavlDisabledFastnode = "iavl-disabled-fastnode"
+	iavlCacheSize        = "iavl-cache-size"
 )
 
 // CommandGenerate generates data
@@ -32,6 +34,8 @@ func CommandGenerate() *cobra.Command {
 	f.Int(totalDelegationsFlag, 0, "Number of delegations to run this cmd, after it we will exit. (optional, 0 for indefinite)")
 	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
 	f.Uint32(numPubRandFlag, 150_000, "Number of pub randomness to commit, should be a high value (optional)")
+	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
+	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
 
 	return cmd
 }
@@ -63,12 +67,24 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", numPubRandFlag, err)
 	}
 
+	iavlCache, err := flags.GetUint(iavlCacheSize)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", iavlCacheSize, err)
+	}
+
+	disabledFastnode, err := flags.GetBool(iavlDisabledFastnode)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", iavlDisabledFastnode, err)
+	}
+
 	cfg := config.Config{
 		NumPubRand:             numPubRand,
 		TotalStakers:           totalStakers,
 		TotalFinalityProviders: totalFps,
 		TotalDelegations:       totalDelegations,
 		BabylonPath:            babylonPath,
+		IavlCacheSize:          iavlCache,
+		IavlDisableFastnode:    disabledFastnode,
 	}
 
 	if err := cfg.Validate(); err != nil {

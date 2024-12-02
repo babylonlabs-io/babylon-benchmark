@@ -8,6 +8,8 @@ type Config struct {
 	TotalFinalityProviders int
 	TotalDelegations       int
 	BabylonPath            string
+	IavlDisableFastnode    bool
+	IavlCacheSize          uint
 }
 
 func (c *Config) Validate() error {

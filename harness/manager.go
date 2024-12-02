@@ -152,7 +152,14 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		babylonDir = runCfg.BabylonPath // override with cfg
 	}
 
-	babylond, babylondNode1, err := manager.RunBabylondResource(babylonDir, baseHeaderHex, hex.EncodeToString(pkScript), epochInterval)
+	babylond, babylondNode1, err := manager.RunBabylondResource(
+		babylonDir,
+		baseHeaderHex,
+		hex.EncodeToString(pkScript),
+		epochInterval,
+		runCfg.IavlDisableFastnode,
+		runCfg.IavlCacheSize,
+	)
 	if err != nil {
 		return nil, err
 	}
