@@ -273,6 +273,10 @@ func (s *BTCStaker) SignOneInputTaprootSpendingTransaction(
 		return nil, fmt.Errorf("failed to encode PSBT packet: %w", err)
 	}
 
+	if err := s.tm.TestRpcClient.WalletPassphrase("pass", 600); err != nil {
+		return nil, fmt.Errorf("failed to unlock wallet: %w", err)
+	}
+
 	sign := true
 	signResult, err := s.tm.TestRpcClient.WalletProcessPsbt(
 		psbtEncoded,

@@ -533,11 +533,12 @@ func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint
 	err := lib.Eventually(ctx, func() bool {
 		res, err := fpm.client.ActivatedHeight()
 		if err != nil {
+			fmt.Printf("err: %s\n", err)
 			return false
 		}
 		height = res.Height
 		return height > 0
-	}, 120*time.Second, eventuallyPollTime)
+	}, 320*time.Second, eventuallyPollTime)
 
 	if err != nil {
 		return 0, fmt.Errorf("err getting activated height err:%v\n", err)
