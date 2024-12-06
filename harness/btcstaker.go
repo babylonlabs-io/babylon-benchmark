@@ -6,6 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"sync/atomic"
+	"time"
+
 	staking "github.com/babylonlabs-io/babylon/btcstaking"
 	"github.com/babylonlabs-io/babylon/crypto/bip322"
 	bbn "github.com/babylonlabs-io/babylon/types"
@@ -23,9 +27,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"strings"
-	"sync/atomic"
-	"time"
 )
 
 type BTCStaker struct {
@@ -273,6 +274,10 @@ func (s *BTCStaker) SignOneInputTaprootSpendingTransaction(
 		return nil, fmt.Errorf("failed to encode PSBT packet: %w", err)
 	}
 
+	if err := s.tm.TestRpcClient.WalletPassphrase("pass", 600); err != nil {
+		return nil, fmt.Errorf("failed to unlock wallet: %w", err)
+	}
+
 	sign := true
 	signResult, err := s.tm.TestRpcClient.WalletProcessPsbt(
 		psbtEncoded,
@@ -398,7 +403,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	stakerPk *btcec.PublicKey,
 	params *btcstypes.Params,
 ) error {
-	unbondingTime := uint16(100)
+	unbondingTime := uint16(21)
 	covKeys, err := bbnPksToBtcPks(params.CovenantPks)
 	if err != nil {
 		return fmt.Errorf("err bbnPksToBtcPks: %w", err)

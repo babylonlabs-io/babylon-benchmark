@@ -15,7 +15,7 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.4.0
 	github.com/avast/retry-go/v4 v4.6.0
-	github.com/babylonlabs-io/babylon v0.17.2
+	github.com/babylonlabs-io/babylon v0.18.0
 	github.com/babylonlabs-io/finality-provider v0.9.1
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
