@@ -1,6 +1,6 @@
-# babylon-benchmark
+# Babylon Benchmark
 
-This repository contains tools and scripts for benchmarking and profiling the Babylon blockchain node.
+This repository contains tools and scripts for benchmarking, profiling and generating data in the Babylon blockchain node.
 
 ## Getting Started
 
@@ -9,7 +9,7 @@ snapshot.
 
 ### The data generation CLI (dgd)
 
-Data generation CLI is built from part of Babylon auxiliary programs (vigilante, btc-staker, finality provider) and 
+Data generation CLI is built partly from the Babylon auxiliary programs (vigilante, btc-staker, finality provider) and 
 is able to create activated delegations and send finality votes, basically simulating what auxiliary programs are doing.
 
 It starts a bitcoind, node0 and node1 docker containers, where node0 and node1 are Babylon validator nodes, 
@@ -46,7 +46,7 @@ Sample log from the dgd:
 Follow these steps to set up and run the benchmark:
 
 1. Clone the repository:
-   ```
+   ```shell
    git clone git@github.com:babylonlabs-io/babylon-benchmark.git
    cd babylon-benchmark
    ```
