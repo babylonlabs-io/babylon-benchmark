@@ -1,27 +1,68 @@
-# babylon-benchmark
+# Babylon Benchmark
 
-This repository contains tools and scripts for benchmarking and profiling the Babylon blockchain node.
+This repository contains tools and scripts for benchmarking, profiling and generating data in the Babylon blockchain node.
 
 ## Getting Started
+
+The repository consists of two independent parts, data generation CLI (dgd) and scripts used to demonstrate sync from a 
+snapshot.
+
+### The data generation CLI (dgd)
+
+Data generation CLI is built partly from the Babylon auxiliary programs (vigilante, btc-staker, finality provider) and 
+is able to create activated delegations and send finality votes, basically simulating what auxiliary programs are doing.
+
+It starts `bitcoind`, `node0` and `node1` docker containers, where `node0` and `node1` are Babylon validator nodes, 
+`node0` is used for all other RPC related queries while `node1` is strictly used for submitting delegations.
+
+#### Building the CLI
+
+1. Build the CLI by running `make build`.
+2. Confirm that `dgd` CLI has been built successfully by running `./build/dgd version`
+
+#### Command examples 
+
+The following command starts:
+- 20 finality providers
+- 200 btc stakers
+- total-delegations - indicates that the daemon will shut down after this number
+
+```shell
+./build/dgd generate --total-fps 20 --total-stakers 200 --total-delegations 1250000 --babylon-path /data/babylon-benchmark
+```
+
+Sample log from the dgd:
+```
+🔎 Found 1 non-finalized block(s). Next block to finalize: 2723
+📌 Sending checkpoint for epoch 141 with proof 2
+📄 Delegations sent: 22585, rate: 8.00 delegations/sec, ts: Fri Dec  6 15:58:16 UTC 2024, mem: 5347 MB
+⏱️ Average delegation submission time: 2.0138 seconds
+✍️ Fp e5342f02b71cabec2ef96d8adf1d4d1c98706e3f928911b00b74fed763b98363, voted for block range [2723-2723]
+✍️ Fp 63bc13483ff1b3b436ec8a1a4d8c542e4b63fee4f3e3e19e0e7cf3b583b06fee, voted for block range [2723-2723]
+```
+
+### Starting main & follower nodes from a snapshot
 
 Follow these steps to set up and run the benchmark:
 
 1. Clone the repository:
-   ```
+   ```shell
    git clone git@github.com:babylonlabs-io/babylon-benchmark.git
    cd babylon-benchmark
    ```
 
-2. Initialize, update, and checkout the correct version of submodules:
+2. Initialize, update, and check out the correct version of submodules:
    ```bash
    git submodule init
    git submodule update
    cd submodules/babylon
-   git checkout v0.11.0
+   git checkout v0.18.0
    cd ../..
    ```
    
-   Note: By default, the submodules are pointing to version `v0.11.0`, which corresponds to the Phase 2 devnet-1 snapshot. Always ensure that the Babylon version matches the snapshot you're using. You can verify the correct version in the [devnet-k8s repository](https://github.com/babylonlabs-io/devnet-k8s/blob/3cb993b2bac9ed9b88a4e92f09c0e4d1d65cad08/flux/services/phase-2/network/rpcs/helmrelease.yaml#L25). If you're using a different snapshot or version, make sure to checkout the appropriate tag or commit in the Babylon submodule.
+Note: By default, the submodules are pointing to version `v0.18.0`, which corresponds to the Phase 2 devnet-1 snapshot. 
+Always ensure that the Babylon version matches the snapshot you're using. You can verify the correct version in the [devnet-k8s repository](https://github.com/babylonlabs-io/devnet-k8s/blob/3cb993b2bac9ed9b88a4e92f09c0e4d1d65cad08/flux/services/phase-2/network/rpcs/helmrelease.yaml#L25). 
+If you're using a different snapshot or version, make sure to checkout the appropriate tag or commit in the Babylon submodule.
 
 3. Prepare the snapshot:
    - Download the Phase 2 devnet snapshot from [this thread](https://babylonlabsworkspace.slack.com/archives/G07DYV8MA1M/p1728476907088119?thread_ts=1728461084.441899&cid=G07DYV8MA1M).
