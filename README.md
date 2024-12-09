@@ -12,8 +12,8 @@ snapshot.
 Data generation CLI is built partly from the Babylon auxiliary programs (vigilante, btc-staker, finality provider) and 
 is able to create activated delegations and send finality votes, basically simulating what auxiliary programs are doing.
 
-It starts a bitcoind, node0 and node1 docker containers, where node0 and node1 are Babylon validator nodes, 
-node0 is used for all other RPC related queries while node1 is strictly used for submitting delegations.
+It starts `bitcoind`, `node0` and `node1` docker containers, where `node0` and `node1` are Babylon validator nodes, 
+`node0` is used for all other RPC related queries while `node1` is strictly used for submitting delegations.
 
 #### Building the CLI
 
