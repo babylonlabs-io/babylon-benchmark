@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
@@ -104,7 +105,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 			return err
 		}
 
-		fpPK, err := eots.CreateKey(keyName, fpm.passphrase, "") // todo(lazar): hdpath?
+		fpPK, err := eots.CreateKey(keyName) // todo(lazar): hdpath?
 		if err != nil {
 			return err
 		}
@@ -113,12 +114,12 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 			return err
 		}
 
-		fpRecord, err := eots.KeyRecord(btcPk.MustMarshal(), fpm.passphrase)
+		fpRecord, err := eots.KeyRecord(btcPk.MustMarshal())
 		if err != nil {
 			return err
 		}
 
-		pop, err := bstypes.NewPoPBTC(finalitySender.BabylonAddress, fpRecord.PrivKey)
+		pop, err := datagen.NewPoPBTC(finalitySender.BabylonAddress, fpRecord.PrivKey)
 		if err != nil {
 			return err
 		}
@@ -189,12 +190,12 @@ func (fpi *FinalityProviderInstance) commitRandomness(ctx context.Context, npr u
 
 func (fpi *FinalityProviderInstance) register(
 	ctx context.Context, signerAddr string, fpPk *bbntypes.BIP340PubKey, pop *bstypes.ProofOfPossessionBTC) (*pv.RelayerTxResponse, error) {
-
-	commission := sdkmath.LegacyZeroDec()
+	zero := sdkmath.LegacyZeroDec()
+	commission := bstypes.NewCommissionRates(zero, zero, zero)
 	msgNewVal := &bstypes.MsgCreateFinalityProvider{
 		Addr:        signerAddr,
 		Description: &stakingtypes.Description{Moniker: lib.GenRandomHexStr(r, 10)},
-		Commission:  &commission,
+		Commission:  commission,
 		BtcPk:       fpPk,
 		Pop:         pop,
 	}
@@ -202,10 +203,6 @@ func (fpi *FinalityProviderInstance) register(
 
 	if err != nil {
 		return nil, err
-	}
-
-	if resp == nil {
-		return nil, fmt.Errorf("resp from send msg is nil for fp %s", fpPk.MustMarshal())
 	}
 
 	return resp, nil
@@ -227,13 +224,9 @@ func (fpi *FinalityProviderInstance) commitPubRandList(
 		Sig:         bbntypes.NewBIP340SignatureFromBTCSig(sig),
 	}
 
-	resp, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
+	_, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
-	}
-
-	if resp == nil {
-		return fmt.Errorf("🚫: resp empty when commiting pub ran")
 	}
 
 	return nil
@@ -291,7 +284,6 @@ func (fpi *FinalityProviderInstance) getPubRandList(startHeight uint64, numPubRa
 		[]byte(chainId),
 		startHeight,
 		numPubRand,
-		fpi.passphrase,
 	)
 	if err != nil {
 		return nil, err
@@ -331,7 +323,7 @@ func (fpi *FinalityProviderInstance) signPubRandCommit(fpPk bbntypes.BIP340PubKe
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
-	return fpi.localEOTS.SignSchnorrSig(fpPk.MustMarshal(), hash, fpi.passphrase)
+	return fpi.localEOTS.SignSchnorrSig(fpPk.MustMarshal(), hash)
 }
 
 func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
@@ -377,7 +369,7 @@ func (fpi *FinalityProviderInstance) submitFinalitySignature(ctx context.Context
 func (fpi *FinalityProviderInstance) signFinalitySig(b *BlockInfo, btcPk *bbntypes.BIP340PubKey) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-	sig, err := fpi.localEOTS.SignEOTS(btcPk.MustMarshal(), []byte(chainId), msgToSign, b.Height, fpi.passphrase)
+	sig, err := fpi.localEOTS.SignEOTS(btcPk.MustMarshal(), []byte(chainId), msgToSign, b.Height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
