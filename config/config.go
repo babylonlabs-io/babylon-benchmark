@@ -4,6 +4,7 @@ import "fmt"
 
 type Config struct {
 	NumPubRand             uint32
+	NumMatureOutputs       uint32
 	TotalStakers           int
 	TotalFinalityProviders int
 	TotalDelegations       int
@@ -27,6 +28,10 @@ func (c *Config) Validate() error {
 
 	if c.NumPubRand > 10_000_000 {
 		return fmt.Errorf("max numbe for pub randomness 10m")
+	}
+
+	if c.NumMatureOutputs <= 0 {
+		return fmt.Errorf("num mature outputs should be greater than 0")
 	}
 
 	return nil

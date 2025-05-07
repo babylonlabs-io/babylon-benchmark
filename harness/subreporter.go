@@ -126,7 +126,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 		return err
 	}
 
-	proofs := s.waitFor2TransactionsConfirmation(ctx, hash1, hash2, 2)
+	proofs := s.waitFor2TransactionsConfirmation(ctx, hash1, hash2, 4)
 
 	if len(proofs) == 0 {
 		// we are quiting

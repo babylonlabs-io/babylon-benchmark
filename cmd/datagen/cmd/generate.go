@@ -15,6 +15,7 @@ const (
 	numPubRandFlag       = "num-public-randomness"
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
+	numMatureOutputsFlag = "num-mature-outputs"
 )
 
 // CommandGenerate generates data
@@ -36,6 +37,7 @@ func CommandGenerate() *cobra.Command {
 	f.Uint32(numPubRandFlag, 150_000, "Number of pub randomness to commit, should be a high value (optional)")
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
+	f.Uint32(numMatureOutputsFlag, 6000, "Number of blocks to be mined")
 
 	return cmd
 }
@@ -77,6 +79,11 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", iavlDisabledFastnode, err)
 	}
 
+	numMatureOutputs, err := flags.GetUint32(numMatureOutputsFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", numMatureOutputsFlag, err)
+	}
+
 	cfg := config.Config{
 		NumPubRand:             numPubRand,
 		TotalStakers:           totalStakers,
@@ -85,6 +92,7 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		BabylonPath:            babylonPath,
 		IavlCacheSize:          iavlCache,
 		IavlDisableFastnode:    disabledFastnode,
+		NumMatureOutputs:       numMatureOutputs,
 	}
 
 	if err := cfg.Validate(); err != nil {

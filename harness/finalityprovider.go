@@ -525,7 +525,7 @@ func (fpm *FinalityProviderManager) waitForActivation(ctx context.Context) (uint
 	err := lib.Eventually(ctx, func() bool {
 		res, err := fpm.client.ActivatedHeight()
 		if err != nil {
-			fmt.Printf("err: %s\n", err)
+			fmt.Printf("🚫 Err: %s\n", err)
 			return false
 		}
 		height = res.Height

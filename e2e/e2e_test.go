@@ -14,7 +14,8 @@ func TestCreatesDelegations(t *testing.T) {
 	defer cancel()
 
 	cfg := config.Config{
-		NumPubRand:             1000,
+		NumPubRand:             100,
+		NumMatureOutputs:       1000,
 		TotalStakers:           20,
 		TotalFinalityProviders: 3,
 		TotalDelegations:       50,

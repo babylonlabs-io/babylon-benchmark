@@ -6,7 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -25,11 +27,11 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type BTCStaker struct {
+	mu              sync.Mutex
 	tm              *TestManager
 	client          *SenderWithBabylonClient
 	fpPK            *btcec.PublicKey
@@ -163,7 +165,7 @@ func (s *BTCStaker) NewBabylonBip322Pop(
 }
 
 func (s *BTCStaker) signBip322NativeSegwit(stakerAddress btcutil.Address) (*btcstypes.ProofOfPossessionBTC, error) {
-	babylonAddrHash := tmhash.Sum(s.client.BabylonAddress.Bytes())
+	babylonAddrHash := []byte(s.client.BabylonAddress.String())
 
 	toSpend, err := bip322.GetToSpendTx(babylonAddrHash, stakerAddress)
 
@@ -567,12 +569,8 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	}
 
 	start := time.Now()
-	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel})
-	if err != nil {
+	if _, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel}); err != nil {
 		return fmt.Errorf("err sending MsgCreateBTCDelegation %w", err)
-	}
-	if resp == nil {
-		return fmt.Errorf("resp from send msg is nil %v", msgBTCDel)
 	}
 	elapsed := time.Since(start)
 
@@ -595,8 +593,11 @@ func bbnPksToBtcPks(pks []bbn.BIP340PubKey) ([]*btcec.PublicKey, error) {
 }
 
 func (s *BTCStaker) randomFpPK() *btcec.PublicKey {
-	r.Seed(time.Now().UnixNano())
-	randomIndex := r.Intn(len(s.fpPKChunk))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rnd := rand.New(rand.NewSource(time.Now().Unix()))
+	rnd.Seed(time.Now().UnixNano())
+	randomIndex := rnd.Intn(len(s.fpPKChunk))
 
 	return s.fpPKChunk[randomIndex]
 }
