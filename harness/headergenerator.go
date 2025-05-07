@@ -47,7 +47,7 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 		headers = append(headers, header)
 	}
 
-	for headersChunk := range slices.Chunk(headers, 1500) {
+	for headersChunk := range slices.Chunk(headers, 200) {
 		if _, err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
 			return err
 		}

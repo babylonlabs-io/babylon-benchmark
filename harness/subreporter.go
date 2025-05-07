@@ -36,7 +36,7 @@ func (s *SubReporter) Start(ctx context.Context) {
 }
 
 func (s *SubReporter) runForever(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -140,12 +140,9 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 		Proofs:    proofs,
 	}
 
-	resp, err := s.client.SendMsgs(ctx, []sdk.Msg{msg})
+	_, err = s.client.SendMsgs(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
-	}
-	if resp == nil {
-		return fmt.Errorf("send messages nil")
 	}
 
 	return nil
