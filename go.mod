@@ -4,11 +4,8 @@ go 1.23.2
 
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	//github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	//github.com/cometbft/cometbft => github.com/cometbft/cometbft v0.38.11 // todo(lazar): see who is forcing .12 conflicting version
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace => go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.0.1
-//google.golang.org/grpc => google.golang.org/grpc v1.63.2
 )
 
 require (

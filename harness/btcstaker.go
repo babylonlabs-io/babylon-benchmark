@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -31,7 +30,6 @@ import (
 )
 
 type BTCStaker struct {
-	mu              sync.Mutex
 	tm              *TestManager
 	client          *SenderWithBabylonClient
 	fpPK            *btcec.PublicKey
@@ -593,8 +591,6 @@ func bbnPksToBtcPks(pks []bbn.BIP340PubKey) ([]*btcec.PublicKey, error) {
 }
 
 func (s *BTCStaker) randomFpPK() *btcec.PublicKey {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 	rnd.Seed(time.Now().UnixNano())
 	randomIndex := rnd.Intn(len(s.fpPKChunk))
