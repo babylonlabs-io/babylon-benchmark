@@ -47,8 +47,8 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 		headers = append(headers, header)
 	}
 
-	for headersChunk := range slices.Chunk(headers, 1500) {
-		if _, err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
+	for headersChunk := range slices.Chunk(headers, 200) {
+		if err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
 			return err
 		}
 	}
@@ -69,13 +69,18 @@ func (g *BTCHeaderGenerator) runForever(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			_ = g.genBlocks(ctx)
+			if err := g.genBlocks(ctx); err != nil {
+				fmt.Printf("🚫 err generating blocks: %v\n", err)
+			}
 		}
 	}
 }
 
 func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 	resp := g.tm.BitcoindHandler.GenerateBlocks(ctx, 1)
+	if len(resp.Blocks) == 0 {
+		return fmt.Errorf("generated block is empty")
+	}
 	hash, err := chainhash.NewHashFromStr(resp.Blocks[0])
 	if err != nil {
 		return err
@@ -84,7 +89,7 @@ func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = g.client.InsertBTCHeadersToBabylon(ctx, []*wire.BlockHeader{&block.Header})
+	err = g.client.InsertBTCHeadersToBabylon(ctx, []*wire.BlockHeader{&block.Header})
 	if err != nil {
 		return err
 	}

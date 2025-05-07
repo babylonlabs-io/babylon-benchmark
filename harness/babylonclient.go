@@ -3,9 +3,9 @@ package harness
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon/app/params"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	"math/rand"
 	"sync"
 	"time"
@@ -21,9 +21,6 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
-	pv "github.com/cosmos/relayer/v2/relayer/provider"
-	"go.uber.org/zap"
 )
 
 var (
@@ -48,14 +45,13 @@ func getEncodingConfig() *params.EncodingConfig {
 
 type Client struct {
 	*query.QueryClient
-	provider *cosmos.CosmosProvider
+	provider *babylonclient.CosmosProvider
 }
 
 func New(
-	ctx context.Context, cfg *config.BabylonConfig, logger *zap.Logger) (*Client, error) {
+	cfg *config.BabylonConfig) (*Client, error) {
 	var (
-		zapLogger *zap.Logger
-		err       error
+		err error
 	)
 	getEncodingConfig()
 
@@ -64,40 +60,27 @@ func New(
 		return nil, err
 	}
 
-	// use the existing logger or create a new one if not given
-	zapLogger = logger
-	if zapLogger == nil {
-		zapLogger = zap.NewNop()
-	}
-
 	provider, err := cfg.ToCosmosProviderConfig().NewProvider(
-		zapLogger,
 		"", // TODO: set home path
-		true,
 		"babylon",
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	cp := provider.(*cosmos.CosmosProvider)
+	cp := provider.(*babylonclient.CosmosProvider)
 	//cp.PCfg.KeyDirectory = cfg.KeyDirectory
 
 	// Create tmp Babylon0 app to retrieve and register codecs
 	// Need to override this manually as otherwise option from config is ignored
 
-	cp.Cdc = cosmos.Codec{
-		InterfaceRegistry: encCfg.InterfaceRegistry,
-		Marshaler:         encCfg.Codec,
-		TxConfig:          encCfg.TxConfig,
-		Amino:             encCfg.Amino,
-	}
+	cp.Cdc = bbn.GetEncodingConfig()
 
 	// initialise Cosmos provider
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
 	// connection with Babylon0 node
-	if err = cp.Init(ctx); err != nil {
+	if err = cp.Init(); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +124,7 @@ func NewSenderWithBabylonClient(
 	cfg.GRPCAddr = grpcaddr
 	cfg.GasAdjustment = 3.0
 
-	cl, err := New(ctx, &cfg, zap.NewNop())
+	cl, err := New(&cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -165,30 +148,27 @@ func NewSenderWithBabylonClient(
 	}, nil
 }
 
-func (s *SenderWithBabylonClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) (*pv.RelayerTxResponse, error) {
+func (s *SenderWithBabylonClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) error {
 	relayerMsgs := ToProviderMsgs(msgs)
-	resp, success, err := s.provider.SendMessages(ctx, relayerMsgs, "")
+	err := s.provider.SendMessagesToMempool(ctx, relayerMsgs, "", ctx, []func(*babylonclient.RelayerTxResponse, error){})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if !success {
-		return resp, fmt.Errorf("message send but failed to execute")
-	}
-
-	return resp, nil
+	return nil
 }
 
-func ToProviderMsgs(msgs []sdk.Msg) []pv.RelayerMessage {
-	var relayerMsgs []pv.RelayerMessage
+// ToProviderMsgs converts a list of sdk.Msg to a list of provider.RelayerMessage
+func ToProviderMsgs(msgs []sdk.Msg) []babylonclient.RelayerMessage {
+	relayerMsgs := make([]babylonclient.RelayerMessage, 0, len(msgs))
 	for _, m := range msgs {
-		relayerMsgs = append(relayerMsgs, cosmos.NewCosmosMessage(m, func(signer string) {}))
+		relayerMsgs = append(relayerMsgs, babylonclient.NewCosmosMessage(m, func(signer string) {}))
 	}
 	return relayerMsgs
 }
 
-func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
+func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) error {
 	headersBytes := make([]bbntypes.BTCHeaderBytes, 0, len(headers))
 
 	for _, h := range headers {

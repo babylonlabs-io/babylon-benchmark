@@ -76,15 +76,9 @@ func (c *CovenantEmulator) sendMsgsWithSig(ctx context.Context) error {
 		return err
 	}
 
-	resp, err := c.client.SendMsgs(ctx, messages)
-	if err != nil {
+	if err := c.client.SendMsgs(ctx, messages); err != nil {
 		return err
 	}
-	if resp == nil {
-		return fmt.Errorf("err sending msgs in cov")
-	}
-
-	//fmt.Printf("sent %d covenant messages for delegations\n", len(messages))
 
 	return nil
 }
