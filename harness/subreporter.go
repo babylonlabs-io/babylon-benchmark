@@ -140,8 +140,7 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 		Proofs:    proofs,
 	}
 
-	_, err = s.client.SendMsgs(ctx, []sdk.Msg{msg})
-	if err != nil {
+	if err = s.client.SendMsgs(ctx, []sdk.Msg{msg}); err != nil {
 		return err
 	}
 

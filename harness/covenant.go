@@ -76,7 +76,7 @@ func (c *CovenantEmulator) sendMsgsWithSig(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := c.client.SendMsgs(ctx, messages); err != nil {
+	if err := c.client.SendMsgs(ctx, messages); err != nil {
 		return err
 	}
 

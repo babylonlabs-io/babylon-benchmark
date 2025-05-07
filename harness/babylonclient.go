@@ -21,7 +21,6 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	pv "github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 var (
@@ -149,17 +148,15 @@ func NewSenderWithBabylonClient(
 	}, nil
 }
 
-func (s *SenderWithBabylonClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) (*pv.RelayerTxResponse, error) {
+func (s *SenderWithBabylonClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) error {
 	relayerMsgs := ToProviderMsgs(msgs)
 	err := s.provider.SendMessagesToMempool(ctx, relayerMsgs, "", ctx, []func(*babylonclient.RelayerTxResponse, error){})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var resp *pv.RelayerTxResponse
-
-	return resp, nil
+	return nil
 }
 
 // ToProviderMsgs converts a list of sdk.Msg to a list of provider.RelayerMessage
@@ -171,7 +168,7 @@ func ToProviderMsgs(msgs []sdk.Msg) []babylonclient.RelayerMessage {
 	return relayerMsgs
 }
 
-func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) (*pv.RelayerTxResponse, error) {
+func (s *SenderWithBabylonClient) InsertBTCHeadersToBabylon(ctx context.Context, headers []*wire.BlockHeader) error {
 	headersBytes := make([]bbntypes.BTCHeaderBytes, 0, len(headers))
 
 	for _, h := range headers {

@@ -48,7 +48,7 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 	}
 
 	for headersChunk := range slices.Chunk(headers, 200) {
-		if _, err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
+		if err = s.client.InsertBTCHeadersToBabylon(ctx, headersChunk); err != nil {
 			return err
 		}
 	}
@@ -89,7 +89,7 @@ func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = g.client.InsertBTCHeadersToBabylon(ctx, []*wire.BlockHeader{&block.Header})
+	err = g.client.InsertBTCHeadersToBabylon(ctx, []*wire.BlockHeader{&block.Header})
 	if err != nil {
 		return err
 	}

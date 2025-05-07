@@ -567,7 +567,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	}
 
 	start := time.Now()
-	if _, err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel}); err != nil {
+	if err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel}); err != nil {
 		return fmt.Errorf("err sending MsgCreateBTCDelegation %w", err)
 	}
 	elapsed := time.Since(start)

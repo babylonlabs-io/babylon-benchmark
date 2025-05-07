@@ -20,7 +20,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	pv "github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"time"
 )
@@ -134,7 +133,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 			passphrase:  fpm.passphrase,
 		}
 
-		if _, err = fpis[i].register(ctx, finalitySender.BabylonAddress.String(), btcPk, pop); err != nil {
+		if err = fpis[i].register(ctx, finalitySender.BabylonAddress.String(), btcPk, pop); err != nil {
 			return err
 		}
 	}
@@ -189,7 +188,7 @@ func (fpi *FinalityProviderInstance) commitRandomness(ctx context.Context, npr u
 }
 
 func (fpi *FinalityProviderInstance) register(
-	ctx context.Context, signerAddr string, fpPk *bbntypes.BIP340PubKey, pop *bstypes.ProofOfPossessionBTC) (*pv.RelayerTxResponse, error) {
+	ctx context.Context, signerAddr string, fpPk *bbntypes.BIP340PubKey, pop *bstypes.ProofOfPossessionBTC) error {
 	zero := sdkmath.LegacyZeroDec()
 	commission := bstypes.NewCommissionRates(zero, zero, zero)
 	msgNewVal := &bstypes.MsgCreateFinalityProvider{
@@ -199,13 +198,12 @@ func (fpi *FinalityProviderInstance) register(
 		BtcPk:       fpPk,
 		Pop:         pop,
 	}
-	resp, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msgNewVal})
 
-	if err != nil {
-		return nil, err
+	if err := fpi.client.SendMsgs(ctx, []sdk.Msg{msgNewVal}); err != nil {
+		return err
 	}
 
-	return resp, nil
+	return nil
 }
 
 func (fpi *FinalityProviderInstance) commitPubRandList(
@@ -224,8 +222,7 @@ func (fpi *FinalityProviderInstance) commitPubRandList(
 		Sig:         bbntypes.NewBIP340SignatureFromBTCSig(sig),
 	}
 
-	_, err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg})
-	if err != nil {
+	if err := fpi.client.SendMsgs(ctx, []sdk.Msg{msg}); err != nil {
 		return err
 	}
 
@@ -410,7 +407,7 @@ func (fpi *FinalityProviderInstance) SubmitFinalitySig(
 		msgs = append(msgs, msg)
 	}
 
-	if _, err := fpi.client.SendMsgs(ctx, msgs); err != nil {
+	if err := fpi.client.SendMsgs(ctx, msgs); err != nil {
 		return err
 	}
 
