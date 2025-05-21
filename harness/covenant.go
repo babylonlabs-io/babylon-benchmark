@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	staking "github.com/babylonlabs-io/babylon/btcstaking"
@@ -76,8 +77,10 @@ func (c *CovenantEmulator) sendMsgsWithSig(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.client.SendMsgs(ctx, messages); err != nil {
-		return err
+	for batchMsgs := range slices.Chunk(messages, 50) {
+		if err := c.client.SendMsgs(ctx, batchMsgs); err != nil {
+			return err
+		}
 	}
 
 	return nil

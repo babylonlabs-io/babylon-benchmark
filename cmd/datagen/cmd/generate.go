@@ -37,7 +37,7 @@ func CommandGenerate() *cobra.Command {
 	f.Uint32(numPubRandFlag, 150_000, "Number of pub randomness to commit, should be a high value (optional)")
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
-	f.Uint32(numMatureOutputsFlag, 6000, "Number of blocks to be mined")
+	f.Uint32(numMatureOutputsFlag, 4000, "Number of blocks to be mined")
 
 	return cmd
 }
