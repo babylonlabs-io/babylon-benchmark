@@ -27,6 +27,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -369,17 +370,19 @@ func (tm *TestManager) fundAllParties(
 		return fmt.Errorf("context error: %w", ctx.Err())
 	}
 
-	resp, err := tm.BabylonClientNode0.ReliablySendMsgs(
-		ctx,
-		msgs,
-		[]*errors.Error{},
-		[]*errors.Error{},
-	)
-	if err != nil {
-		return err
-	}
-	if resp == nil {
-		return fmt.Errorf("resp fund parties empty")
+	for msgsChunk := range slices.Chunk(msgs, 50) {
+		resp, err := tm.BabylonClientNode0.ReliablySendMsgs(
+			ctx,
+			msgsChunk,
+			[]*errors.Error{},
+			[]*errors.Error{},
+		)
+		if err != nil {
+			return err
+		}
+		if resp == nil {
+			return fmt.Errorf("resp fund parties empty")
+		}
 	}
 
 	return nil

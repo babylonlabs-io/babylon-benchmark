@@ -147,7 +147,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 		}
 	}
 
-	fmt.Printf("⌛ Waiting checkpoint to be finalized\n")
+	fmt.Printf("⌛ Waiting checkpoint epoch %d to be finalized\n", res.CurrentEpoch)
 	if err := fpm.waitUntilFinalized(ctx, res.CurrentEpoch); err != nil {
 		return err
 	}
@@ -420,9 +420,12 @@ func (fpm *FinalityProviderManager) waitUntilFinalized(ctx context.Context, epoc
 		if err != nil {
 			return false
 		}
+
+		fmt.Printf("⌛ Waiting for finalized checkpoint for epoch %d current: %v\n", epoch, lastFinalizedCkpt.RawCheckpoint.EpochNum)
+
 		return epoch <= lastFinalizedCkpt.RawCheckpoint.EpochNum
 
-	}, 120*time.Second, eventuallyPollTime, "🚫: err waiting for ckpt to be finalized")
+	}, 360*time.Second, eventuallyPollTime, "🚫: err waiting for ckpt to be finalized")
 
 	return err
 }
