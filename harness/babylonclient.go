@@ -3,12 +3,16 @@ package harness
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon/app/params"
 	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	"math/rand"
-	"sync"
-	"time"
 
 	bbn "github.com/babylonlabs-io/babylon/app"
 	"github.com/babylonlabs-io/babylon/client/config"
@@ -35,6 +39,13 @@ var (
 	once   sync.Once
 	encCfg *params.EncodingConfig
 )
+
+type KeyExport struct {
+	Type    string `json:"type"`
+	PubKey  string `json:"pubkey"`
+	PrivKey string `json:"privkey"`
+	Address string `json:"address"`
+}
 
 func getEncodingConfig() *params.EncodingConfig {
 	once.Do(func() {
@@ -191,4 +202,79 @@ func senders(stakers []*BTCStaker) []*SenderWithBabylonClient {
 		sends = append(sends, stakerCp.client)
 	}
 	return sends
+}
+
+func (s *SenderWithBabylonClient) SaveKeys(keyName, passphrase string) error {
+	pubArmor, err := s.Client.provider.Keybase.ExportPubKeyArmor(keyName)
+	if err != nil {
+		return err
+	}
+
+	privArmor, err := s.Client.provider.Keybase.ExportPrivKeyArmor(keyName, passphrase)
+	if err != nil {
+		return err
+	}
+
+	keyExport := KeyExport{
+		Type:    "/cosmos.crypto.secp256k1.PubKey",
+		PubKey:  pubArmor,
+		PrivKey: privArmor,
+		Address: s.BabylonAddress.String(),
+	}
+
+	data, err := json.MarshalIndent(keyExport, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(keyName+".export.json", data, 0600)
+}
+
+func (s *SenderWithBabylonClient) LoadKeys(filename, passphrase string) (*SenderWithBabylonClient, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key file: %w", err)
+	}
+
+	var export KeyExport
+	if err := json.Unmarshal(data, &export); err != nil {
+		return nil, fmt.Errorf("failed to parse key export: %w", err)
+	}
+
+	if err := s.Client.provider.Keybase.ImportPrivKey(
+		"temp_import_key",
+		export.PrivKey,
+		passphrase,
+	); err != nil {
+		return nil, fmt.Errorf("failed to import private key: %w", err)
+	}
+
+	keyInfo, err := s.Client.provider.Keybase.Key("temp_import_key")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get imported key: %w", err)
+	}
+
+	var privKey cryptotypes.PrivKey
+	if err := keyInfo.GetLocal().PrivKey; err != nil {
+		return nil, fmt.Errorf("failed to unpack private key: %w", err)
+	}
+
+	pubKey := privKey.PubKey()
+
+	addr, err := keyInfo.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address: %w", err)
+	}
+
+	if export.Address != addr.String() {
+		return nil, fmt.Errorf("address mismatch: file claims %s but key derives %s",
+			export.Address, addr.String())
+	}
+
+	return &SenderWithBabylonClient{
+		Client:         s.Client,
+		PrvKey:         privKey,
+		PubKey:         pubKey,
+		BabylonAddress: addr,
+	}, nil
 }

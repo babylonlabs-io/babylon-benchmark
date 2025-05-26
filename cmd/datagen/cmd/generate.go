@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/harness"
 	"github.com/spf13/cobra"
@@ -16,7 +17,18 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
+	rpcaddr              = "rpc-address"
+	keyName              = "key-name"
+	grpcaddr             = "grpc-address"
+	passPhrase           = "passphrase"
 )
+
+type KeyExport struct {
+	Type    string `json:"type"`
+	PubKey  string `json:"pubkey"`
+	PrivKey string `json:"privkey"`
+	Address string `json:"address"`
+}
 
 // CommandGenerate generates data
 func CommandGenerate() *cobra.Command {
@@ -38,6 +50,26 @@ func CommandGenerate() *cobra.Command {
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
 	f.Uint32(numMatureOutputsFlag, 4000, "Number of blocks to be mined")
+
+	return cmd
+}
+
+func CommandGenerateAndSaveKey() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "gen-and-save-key",
+		Aliases: []string{"gsk"},
+		Short:   "Generates a new key and saves it to the keyring",
+		Example: `dgd gen-and-save-key --key-name my-key --rpc-address http://localhost:26657 --grpc-address http://localhost:9090 --passphrase my-passphrase`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdGenerateAndSaveKey,
+	}
+
+	f := cmd.Flags()
+	f.String(babylonPathFlag, "", "Path to which babylond docker will mount (optional, tmp dir will be used as default)")
+	f.String(keyName, "", "Name of the key to generate")
+	f.String(rpcaddr, "", "RPC address of the Babylon node")
+	f.String(grpcaddr, "", "GRPC address of the Babylon node")
+	f.String(passPhrase, "", "Passphrase of the key")
 
 	return cmd
 }
@@ -100,4 +132,38 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 	}
 
 	return harness.Run(cmd.Context(), cfg)
+}
+
+func cmdGenerateAndSaveKey(cmd *cobra.Command, _ []string) error {
+	flags := cmd.Flags()
+	keyName, err := flags.GetString(keyName)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
+	}
+
+	rpcAddress, err := flags.GetString(rpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
+	}
+
+	grpcAddress, err := flags.GetString(grpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
+	}
+
+	passPhrase, err := flags.GetString(passPhrase)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", passPhrase, err)
+	}
+
+	newKey, err := harness.NewSenderWithBabylonClient(cmd.Context(), keyName, rpcAddress, grpcAddress)
+	if err != nil {
+		return err
+	}
+
+	newKey.SaveKeys(keyName, passPhrase)
+
+	fmt.Printf("Created account %s with address %s\n", keyName, newKey.BabylonAddress)
+
+	return nil
 }
