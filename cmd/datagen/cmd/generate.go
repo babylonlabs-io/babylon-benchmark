@@ -33,14 +33,15 @@ const (
 	keyFileLocation      = "key-file-location"
 )
 
+type Key struct {
+	PubKey  string `json:"pubkey"`
+	PrivKey string `json:"privkey"`
+	Address string `json:"address"`
+}
+
 type KeyExport struct {
-	Type           string `json:"type"`
-	PubKey         string `json:"pubkey"`
-	PrivKey        string `json:"privkey"`
-	Address        string `json:"address"`
-	BitcoinPrivKey string `json:"bitcoin_privkey"`
-	BitcoinPubKey  string `json:"bitcoin_pubkey"`
-	BitcoinAddress string `json:"bitcoin_address"`
+	BabylonKey Key `json:"babylon_key"`
+	BitcoinKey Key `json:"bitcoin_key"`
 }
 
 // CommandGenerate generates data
@@ -69,10 +70,10 @@ func CommandGenerate() *cobra.Command {
 
 func CommandGenerateAndSaveKey() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "gen-and-save-key",
+		Use:     "gen-key",
 		Aliases: []string{"gsk"},
 		Short:   "Generates a new key and saves it to the keyring",
-		Example: `dgd gen-and-save-key --key-name my-key --rpc-address http://localhost:26657 --grpc-address http://localhost:9090 --passphrase my-passphrase`,
+		Example: `dgd gen-key --key-name my-key`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerateAndSaveKeys,
 	}
@@ -150,7 +151,7 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
 
-	err = generateAndSaveKeys(keyName)
+	err = GenerateAndSaveKeys(keyName)
 	if err != nil {
 		return err
 	}
@@ -158,8 +159,7 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func generateAndSaveKeys(keyName string) error {
-
+func GenerateAndSaveKeys(keyName string) error {
 	privKey, pubKey, address := testdata.KeyTestPubAddr()
 
 	btcPrivKey, err := btcec.NewPrivateKey()
@@ -178,34 +178,48 @@ func generateAndSaveKeys(keyName string) error {
 		return err
 	}
 
-	keyExport := KeyExport{
-		Type:           "/cosmos.crypto.secp256k1.PubKey",
-		PubKey:         hex.EncodeToString(pubKey.Bytes()),
-		PrivKey:        hex.EncodeToString(privKey.Bytes()),
-		Address:        address.String(),
-		BitcoinPrivKey: wif.String(),
-		BitcoinPubKey:  hex.EncodeToString(btcPubKey.SerializeCompressed()),
-		BitcoinAddress: btcAddress.EncodeAddress(),
+	bbnKey := Key{
+		PubKey:  hex.EncodeToString(pubKey.Bytes()),
+		PrivKey: hex.EncodeToString(privKey.Bytes()),
+		Address: address.String(),
 	}
 
-	data, err := json.MarshalIndent(keyExport, "", "  ")
+	btcKey := Key{
+		PubKey:  hex.EncodeToString(btcPubKey.SerializeCompressed()),
+		PrivKey: wif.String(),
+		Address: btcAddress.EncodeAddress(),
+	}
+
+	combinedKeys := KeyExport{
+		BabylonKey: bbnKey,
+		BitcoinKey: btcKey,
+	}
+
+	data, err := json.MarshalIndent(combinedKeys, "", " ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshall combined keys")
+	}
+	filename := fmt.Sprintf(keyName + ".export.json")
+
+	os.WriteFile(filename, data, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write to file")
 	}
 
-	return os.WriteFile(keyName+".export.json", data, 0600)
+	return nil
 }
 
-func loadKeys(path string) (*KeyExport, error) {
+func LoadKeys(path string) (*KeyExport, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file")
+		return &KeyExport{}, fmt.Errorf("failed to read file")
 	}
 
-	var keyExport KeyExport
-	err = json.Unmarshal(data, &keyExport)
+	var combinedKeys KeyExport
+	err = json.Unmarshal(data, &combinedKeys)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall")
+		return &KeyExport{}, fmt.Errorf("failed to unmarshal from json")
 	}
-	return &keyExport, nil
+
+	return &combinedKeys, nil
 }
