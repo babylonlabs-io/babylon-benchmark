@@ -1,7 +1,15 @@
 package cmd
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
+
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/harness"
@@ -19,16 +27,20 @@ const (
 	numMatureOutputsFlag = "num-mature-outputs"
 	rpcaddr              = "rpc-address"
 	keyName              = "key-name"
+	BabylonAddress       = "babylon-address"
 	grpcaddr             = "grpc-address"
-	passPhrase           = "passphrase"
-	file                 = "file"
+	passphrase           = "passphrase"
+	keyFileLocation      = "key-file-location"
 )
 
 type KeyExport struct {
-	Type    string `json:"type"`
-	PubKey  string `json:"pubkey"`
-	PrivKey string `json:"privkey"`
-	Address string `json:"address"`
+	Type           string `json:"type"`
+	PubKey         string `json:"pubkey"`
+	PrivKey        string `json:"privkey"`
+	Address        string `json:"address"`
+	BitcoinPrivKey string `json:"bitcoin_privkey"`
+	BitcoinPubKey  string `json:"bitcoin_pubkey"`
+	BitcoinAddress string `json:"bitcoin_address"`
 }
 
 // CommandGenerate generates data
@@ -62,36 +74,11 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 		Short:   "Generates a new key and saves it to the keyring",
 		Example: `dgd gen-and-save-key --key-name my-key --rpc-address http://localhost:26657 --grpc-address http://localhost:9090 --passphrase my-passphrase`,
 		Args:    cobra.NoArgs,
-		RunE:    cmdGenerateAndSaveKeyBabylon,
+		RunE:    cmdGenerateAndSaveKeys,
 	}
 
 	f := cmd.Flags()
-	f.String(babylonPathFlag, "", "Path to which babylond docker will mount (optional, tmp dir will be used as default)")
 	f.String(keyName, "", "Name of the key to generate")
-	f.String(rpcaddr, "", "RPC address of the Babylon node")
-	f.String(grpcaddr, "", "GRPC address of the Babylon node")
-	f.String(passPhrase, "", "Passphrase of the key")
-
-	return cmd
-}
-
-func CommandLoadKey() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "load-key",
-		Aliases: []string{"lk"},
-		Short:   "Loads a key from the keyring",
-		Example: `dgd load-key --key-name my-key --rpc-address http://localhost:26657 --grpc-address http://localhost:9090 --passphrase my-passphrase --file my-key.export.json`,
-		Args:    cobra.NoArgs,
-		RunE:    cmdLoadKeysBabylon,
-	}
-
-	f := cmd.Flags()
-	f.String(babylonPathFlag, "", "Path to which babylond docker will mount (optional, tmp dir will be used as default)")
-	f.String(keyName, "", "Name of the key to load")
-	f.String(rpcaddr, "", "RPC address of the Babylon node")
-	f.String(grpcaddr, "", "GRPC address of the Babylon node")
-	f.String(passPhrase, "", "Passphrase of the key")
-	f.String(file, "", "File to load the key from")
 
 	return cmd
 }
@@ -156,82 +143,55 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 	return harness.Run(cmd.Context(), cfg)
 }
 
-func cmdGenerateAndSaveKeyBabylon(cmd *cobra.Command, _ []string) error {
+func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
 	keyName, err := flags.GetString(keyName)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
 
-	rpcAddress, err := flags.GetString(rpcaddr)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
-	}
-
-	grpcAddress, err := flags.GetString(grpcaddr)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
-	}
-
-	passPhrase, err := flags.GetString(passPhrase)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", passPhrase, err)
-	}
-
-	newKey, err := harness.NewSenderWithBabylonClient(cmd.Context(), keyName, rpcAddress, grpcAddress)
+	err = generateAndSaveKeys(keyName)
 	if err != nil {
 		return err
 	}
-
-	err = newKey.SaveKeys(keyName, passPhrase)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Created account %s with address %s\n", keyName, newKey.BabylonAddress)
 
 	return nil
 }
 
-func cmdLoadKeysBabylon(cmd *cobra.Command, _ []string) error {
-	flags := cmd.Flags()
+func generateAndSaveKeys(keyName string) error {
 
-	keyName, err := flags.GetString(keyName)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
-	}
+	privKey, pubKey, address := testdata.KeyTestPubAddr()
 
-	rpcAddress, err := flags.GetString(rpcaddr)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
-	}
-
-	grpcAddress, err := flags.GetString(grpcaddr)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcAddress, err)
-	}
-
-	passPhrase, err := flags.GetString(passPhrase)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", passPhrase, err)
-	}
-
-	file, err := flags.GetString(file)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", file, err)
-	}
-
-	client, err := harness.NewSenderWithBabylonClient(cmd.Context(), keyName, rpcAddress, grpcAddress)
+	btcPrivKey, err := btcec.NewPrivateKey()
 	if err != nil {
 		return err
 	}
 
-	keys, err := client.LoadKeys(file, passPhrase)
+	wif, err := btcutil.NewWIF(btcPrivKey, &chaincfg.RegressionNetParams, true)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Account %s  loaded with address %s\n", keyName, keys.BabylonAddress)
+	btcPubKey := btcPrivKey.PubKey()
+	btcAddress, err := btcutil.NewAddressPubKey(btcPubKey.SerializeCompressed(), &chaincfg.RegressionNetParams)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	keyExport := KeyExport{
+		Type:           "/cosmos.crypto.secp256k1.PubKey",
+		PubKey:         hex.EncodeToString(pubKey.Bytes()),
+		PrivKey:        hex.EncodeToString(privKey.Bytes()),
+		Address:        address.String(),
+		BitcoinPrivKey: wif.String(),
+		BitcoinPubKey:  hex.EncodeToString(btcPubKey.SerializeCompressed()),
+		BitcoinAddress: btcAddress.EncodeAddress(),
+	}
+
+	data, err := json.MarshalIndent(keyExport, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(keyName+".export.json", data, 0600)
 }

@@ -29,7 +29,6 @@ func main() {
 		cmd.CommandVersion(),
 		cmd.CommandGenerate(),
 		cmd.CommandGenerateAndSaveKey(),
-		cmd.CommandLoadKey(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
