@@ -31,7 +31,10 @@ jobs:
 
     - name: Install dependencies
       run: go mod download
-      
+
+    - name: Tidy Go modules
+      run: go mod tidy
+
     - name: Run tests
       run: go test ./... -v
 
