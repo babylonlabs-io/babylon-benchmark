@@ -195,3 +195,17 @@ func generateAndSaveKeys(keyName string) error {
 
 	return os.WriteFile(keyName+".export.json", data, 0600)
 }
+
+func loadKeys(path string) (*KeyExport, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file")
+	}
+
+	var keyExport KeyExport
+	err = json.Unmarshal(data, &keyExport)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshall")
+	}
+	return &keyExport, nil
+}
