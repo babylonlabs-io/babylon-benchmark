@@ -183,7 +183,10 @@ func cmdGenerateAndSaveKeyBabylon(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	newKey.SaveKeys(keyName, passPhrase)
+	err = newKey.SaveKeys(keyName, passPhrase)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("Created account %s with address %s\n", keyName, newKey.BabylonAddress)
 
@@ -218,12 +221,17 @@ func cmdLoadKeysBabylon(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", file, err)
 	}
 
-	newKey, err := harness.NewSenderWithBabylonClient(cmd.Context(), keyName, rpcAddress, grpcAddress)
+	client, err := harness.NewSenderWithBabylonClient(cmd.Context(), keyName, rpcAddress, grpcAddress)
 	if err != nil {
 		return err
 	}
 
-	newKey.LoadKeys(file, passPhrase)
+	keys, err := client.LoadKeys(file, passPhrase)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Account %s  loaded with address %s\n", keyName, keys.BabylonAddress)
 
 	return nil
 }

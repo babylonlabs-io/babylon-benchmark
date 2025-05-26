@@ -256,7 +256,7 @@ func (s *SenderWithBabylonClient) LoadKeys(filename, passphrase string) (*Sender
 
 	var privKey cryptotypes.PrivKey
 	if err := keyInfo.GetLocal().PrivKey; err != nil {
-		return nil, fmt.Errorf("failed to unpack private key: %w", err)
+		return nil, fmt.Errorf("failed to unpack private key: %v", err)
 	}
 
 	pubKey := privKey.PubKey()
