@@ -10,6 +10,7 @@ import (
 	"github.com/babylonlabs-io/babylon-benchmark/harness"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 )
 
 func TestLoadKeys(t *testing.T) {
@@ -52,7 +53,7 @@ func TestLoadKeys(t *testing.T) {
 		t.Fatalf("failed to decode bbn privkey string into bytes %v", err)
 	}
 
-	bbnAddressBefore, err := hex.DecodeString(keys.BabylonKey.Address)
+	_, bbnAddressBefore, err := bech32.DecodeAndConvert(keys.BabylonKey.Address)
 	if err != nil {
 		t.Fatalf("failed to decode bbn address string into bytes %v", err)
 	}
@@ -72,7 +73,7 @@ func TestLoadKeys(t *testing.T) {
 		t.Fatalf("failed to decode babylon private key %v", err)
 	}
 
-	bbnAddressBytes, err := hex.DecodeString(loadedkeys.BabylonKey.Address)
+	_, bbnAddressBytes, err := bech32.DecodeAndConvert(loadedkeys.BabylonKey.Address)
 	if err != nil {
 		t.Fatalf("failed to decode babylon private key %v", err)
 	}
