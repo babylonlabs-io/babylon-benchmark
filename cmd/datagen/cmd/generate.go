@@ -72,7 +72,7 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "gen-key",
 		Aliases: []string{"gsk"},
-		Short:   "Generates a new key and saves it to the keyring",
+		Short:   "Generates new Bitcoin and Babylon keys and saves them to a file for remote node funding",
 		Example: `dgd gen-key --key-name my-key`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerateAndSaveKeys,
@@ -197,13 +197,13 @@ func GenerateAndSaveKeys(keyName string) error {
 
 	data, err := json.MarshalIndent(combinedKeys, "", " ")
 	if err != nil {
-		return fmt.Errorf("failed to marshall combined keys")
+		return fmt.Errorf("failed to marshall combined keys: %w", err)
 	}
-	filename := fmt.Sprintf(keyName + ".export.json")
+	filename := fmt.Sprintf("%s.export.json", keyName)
 
 	os.WriteFile(filename, data, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to write to file")
+		return fmt.Errorf("failed to write to file: %w", err)
 	}
 
 	return nil
@@ -212,13 +212,13 @@ func GenerateAndSaveKeys(keyName string) error {
 func LoadKeys(path string) (*KeyExport, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return &KeyExport{}, fmt.Errorf("failed to read file")
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	var combinedKeys KeyExport
 	err = json.Unmarshal(data, &combinedKeys)
 	if err != nil {
-		return &KeyExport{}, fmt.Errorf("failed to unmarshal from json")
+		return nil, fmt.Errorf("failed to unmarshal from json: %w", err)
 	}
 
 	return &combinedKeys, nil

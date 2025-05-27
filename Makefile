@@ -9,7 +9,6 @@ help:
 	@echo "  stop-benchmark                  Stop the benchmark environment and clean up data."
 	@echo "  run-dgd                         Run the 'dgd' binary to generate data."
 	@echo "  test                            Run unit tests for the benchmarking tool"
-	@echo "  test-all                        Run all tests for the benchmarking tool"
 	@echo "  test-e2e                        Run e2e tests for the benchmarking tool"
 	@echo "  help                            Display this help message."
 	@echo ""
@@ -75,10 +74,7 @@ test-e2e:
 ###############################################################################
 
 test:
-	go test ./cmd/... ./lib/... -v
-
-test-all: test e2e-test
-	go test ./... -v
+	go test -race ./...
 
 e2e-test:
 	go test ./e2e -v
