@@ -23,7 +23,7 @@ func TestLoadKeys(t *testing.T) {
 		t.Fatalf("failed to generate and save keys %v", err)
 	}
 
-	os.Stat(keyName + ".export.json")
+	_, err = os.Stat(keyName + ".export.json")
 	if err != nil {
 		t.Fatalf("failed to describe file %v", err)
 	}

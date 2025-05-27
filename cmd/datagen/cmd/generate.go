@@ -201,7 +201,7 @@ func GenerateAndSaveKeys(keyName string) error {
 	}
 	filename := fmt.Sprintf("%s.export.json", keyName)
 
-	os.WriteFile(filename, data, 0600)
+	err = os.WriteFile(filename, data, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
 	}
