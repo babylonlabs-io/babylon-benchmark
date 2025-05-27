@@ -22,7 +22,6 @@ const (
 	BabylonAddress       = "babylon-address"
 	grpcaddr             = "grpc-address"
 	passphrase           = "passphrase"
-	keyFileLocation      = "key-file-location"
 )
 
 // CommandGenerate generates data
@@ -128,6 +127,11 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
 	keyName, err := flags.GetString(keyName)
+
+	if keyName == "" {
+		return fmt.Errorf("the key-name flag must be specified")
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
