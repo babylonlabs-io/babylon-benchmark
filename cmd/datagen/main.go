@@ -25,6 +25,8 @@ func NewRootCmd() *cobra.Command {
 
 func main() {
 	rootCmd := NewRootCmd()
+	rootCmd.Flags().StringP("keyName", "k", "", "Key name to generate")
+	rootCmd.MarkFlagRequired("keyName")
 	rootCmd.AddCommand(
 		cmd.CommandVersion(),
 		cmd.CommandGenerate(),

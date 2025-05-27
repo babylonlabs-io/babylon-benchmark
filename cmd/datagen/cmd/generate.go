@@ -128,10 +128,6 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
 	keyName, err := flags.GetString(keyName)
 
-	if keyName == "" {
-		return fmt.Errorf("the key-name flag must be specified")
-	}
-
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
@@ -141,9 +137,9 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fmt.Println("Keys generated and saved to", keyName+".export.json")
-	fmt.Println("Babylon key:", keys.BabylonKey.Address)
-	fmt.Println("Bitcoin key:", keys.BitcoinKey.Address)
+	cmd.Println("Keys generated 💅 and saved to", keyName+".export.json")
+	cmd.Println("Babylon key 🔑", keys.BabylonKey.Address)
+	cmd.Println("Bitcoin key 🔑", keys.BitcoinKey.Address)
 
 	return nil
 }
