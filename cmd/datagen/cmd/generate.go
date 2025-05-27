@@ -1,15 +1,7 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"os"
-
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/harness"
@@ -32,17 +24,6 @@ const (
 	passphrase           = "passphrase"
 	keyFileLocation      = "key-file-location"
 )
-
-type Key struct {
-	PubKey  string `json:"pubkey"`
-	PrivKey string `json:"privkey"`
-	Address string `json:"address"`
-}
-
-type KeyExport struct {
-	BabylonKey Key `json:"babylon_key"`
-	BitcoinKey Key `json:"bitcoin_key"`
-}
 
 // CommandGenerate generates data
 func CommandGenerate() *cobra.Command {
@@ -151,75 +132,10 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
 
-	err = GenerateAndSaveKeys(keyName)
+	_, err = harness.GenerateAndSaveKeys(keyName)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func GenerateAndSaveKeys(keyName string) error {
-	privKey, pubKey, address := testdata.KeyTestPubAddr()
-
-	btcPrivKey, err := btcec.NewPrivateKey()
-	if err != nil {
-		return err
-	}
-
-	wif, err := btcutil.NewWIF(btcPrivKey, &chaincfg.RegressionNetParams, true)
-	if err != nil {
-		return err
-	}
-
-	btcPubKey := btcPrivKey.PubKey()
-	btcAddress, err := btcutil.NewAddressPubKey(btcPubKey.SerializeCompressed(), &chaincfg.RegressionNetParams)
-	if err != nil {
-		return err
-	}
-
-	bbnKey := Key{
-		PubKey:  hex.EncodeToString(pubKey.Bytes()),
-		PrivKey: hex.EncodeToString(privKey.Bytes()),
-		Address: address.String(),
-	}
-
-	btcKey := Key{
-		PubKey:  hex.EncodeToString(btcPubKey.SerializeCompressed()),
-		PrivKey: wif.String(),
-		Address: btcAddress.EncodeAddress(),
-	}
-
-	combinedKeys := KeyExport{
-		BabylonKey: bbnKey,
-		BitcoinKey: btcKey,
-	}
-
-	data, err := json.MarshalIndent(combinedKeys, "", " ")
-	if err != nil {
-		return fmt.Errorf("failed to marshall combined keys: %w", err)
-	}
-	filename := fmt.Sprintf("%s.export.json", keyName)
-
-	err = os.WriteFile(filename, data, 0600)
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
-	}
-
-	return nil
-}
-
-func LoadKeys(path string) (*KeyExport, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	var combinedKeys KeyExport
-	err = json.Unmarshal(data, &combinedKeys)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal from json: %w", err)
-	}
-
-	return &combinedKeys, nil
 }

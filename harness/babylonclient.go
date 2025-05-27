@@ -37,13 +37,6 @@ var (
 	encCfg *params.EncodingConfig
 )
 
-type KeyExport struct {
-	Type    string `json:"type"`
-	PubKey  string `json:"pubkey"`
-	PrivKey string `json:"privkey"`
-	Address string `json:"address"`
-}
-
 func getEncodingConfig() *params.EncodingConfig {
 	once.Do(func() {
 		encCfg = bbn.GetEncodingConfig()
