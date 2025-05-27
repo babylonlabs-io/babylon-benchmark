@@ -136,10 +136,14 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
 	}
 
-	_, err = harness.GenerateAndSaveKeys(keyName)
+	keys, err := harness.GenerateAndSaveKeys(keyName)
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Keys generated and saved to", keyName+".export.json")
+	fmt.Println("Babylon key:", keys.BabylonKey.Address)
+	fmt.Println("Bitcoin key:", keys.BitcoinKey.Address)
 
 	return nil
 }

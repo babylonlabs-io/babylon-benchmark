@@ -70,10 +70,6 @@ func GenerateAndSaveKeys(keyName string) (*KeyExport, error) {
 		return nil, fmt.Errorf("failed to write to file: %w", err)
 	}
 
-	fmt.Println("Keys generated and saved to", keyName+".export.json")
-	fmt.Println("Babylon key:", bbnKey.Address)
-	fmt.Println("Bitcoin key:", btcKey.Address)
-
 	return &combinedKeys, nil
 }
 
@@ -88,10 +84,6 @@ func LoadKeys(path string) (*KeyExport, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal from json: %w", err)
 	}
-
-	fmt.Println("Keys loaded from", path)
-	fmt.Println("Babylon key:", combinedKeys.BabylonKey.Address)
-	fmt.Println("Bitcoin key:", combinedKeys.BitcoinKey.Address)
 
 	return &combinedKeys, nil
 }
