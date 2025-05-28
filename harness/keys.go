@@ -31,13 +31,13 @@ func GenerateAndSaveKeys(keyName string) (*KeyExport, error) {
 		return nil, err
 	}
 
-	wif, err := btcutil.NewWIF(btcPrivKey, &chaincfg.RegressionNetParams, true)
+	wif, err := btcutil.NewWIF(btcPrivKey, &chaincfg.SigNetParams, true)
 	if err != nil {
 		return nil, err
 	}
 
 	btcPubKey := btcPrivKey.PubKey()
-	btcAddress, err := btcutil.NewAddressPubKey(btcPubKey.SerializeCompressed(), &chaincfg.RegressionNetParams)
+	btcAddress, err := btcutil.NewAddressPubKey(btcPubKey.SerializeCompressed(), &chaincfg.SigNetParams)
 	if err != nil {
 		return nil, err
 	}

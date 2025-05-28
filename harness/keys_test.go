@@ -38,7 +38,7 @@ func TestLoadKeys(t *testing.T) {
 
 	btcPrivKeyBefore := wif.PrivKey.Key.Bytes()
 
-	btcAddressBefore, err := btcutil.DecodeAddress(keys.BitcoinKey.Address, &chaincfg.RegressionNetParams)
+	btcAddressBefore, err := btcutil.DecodeAddress(keys.BitcoinKey.Address, &chaincfg.SigNetParams)
 	if err != nil {
 		t.Fatalf("failed to decode btc address string into bytes %v", err)
 	}
@@ -90,7 +90,7 @@ func TestLoadKeys(t *testing.T) {
 
 	privKeyBytes := PrivKeyBytes.PrivKey.Key.Bytes()
 
-	address, err := btcutil.DecodeAddress(loadedkeys.BitcoinKey.Address, &chaincfg.RegressionNetParams)
+	address, err := btcutil.DecodeAddress(loadedkeys.BitcoinKey.Address, &chaincfg.SigNetParams)
 	if err != nil {
 		t.Fatalf("failed to decode bitcoin address %v", err)
 	}
