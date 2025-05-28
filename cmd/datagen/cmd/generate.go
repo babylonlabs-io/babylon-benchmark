@@ -21,7 +21,6 @@ const (
 	keyName              = "key-name"
 	BabylonAddress       = "babylon-address"
 	grpcaddr             = "grpc-address"
-	passphrase           = "passphrase"
 )
 
 // CommandGenerate generates data
