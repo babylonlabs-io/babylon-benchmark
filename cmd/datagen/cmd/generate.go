@@ -60,6 +60,9 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 
 	f := cmd.Flags()
 	f.String(keyName, "", "Name of the key to generate")
+	if err := cmd.MarkFlagRequired(keyName); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -137,9 +140,7 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	cmd.Println("Keys generated 💅 and saved to", keyName+".export.json")
-	cmd.Println("Babylon key 🔑", keys.BabylonKey.Address)
-	cmd.Println("Bitcoin key 🔑", keys.BitcoinKey.Address)
+	fmt.Printf("Keys generated 💅 and saved to %s\nBabylon key 🔑 %s\nBitcoin key 🔑 %s\n", keyName+".export.json", keys.BabylonKey.Address, keys.BitcoinKey.Address)
 
 	return nil
 }
