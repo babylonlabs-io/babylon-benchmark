@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/babylon-benchmark/cmd/datagen/cmd"
-	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/babylonlabs-io/babylon-benchmark/cmd/datagen/cmd"
+	"github.com/spf13/cobra"
 )
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
@@ -27,6 +28,7 @@ func main() {
 	rootCmd.AddCommand(
 		cmd.CommandVersion(),
 		cmd.CommandGenerate(),
+		cmd.CommandGenerateAndSaveKey(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

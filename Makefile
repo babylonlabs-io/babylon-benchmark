@@ -8,6 +8,8 @@ help:
 	@echo "  start-benchmark-from-snapshot   Start the benchmark environment from a snapshot."
 	@echo "  stop-benchmark                  Stop the benchmark environment and clean up data."
 	@echo "  run-dgd                         Run the 'dgd' binary to generate data."
+	@echo "  test                            Run unit tests for the benchmarking tool"
+	@echo "  test-e2e                        Run e2e tests for the benchmarking tool"
 	@echo "  help                            Display this help message."
 	@echo ""
 	@echo "Variables:"
@@ -66,3 +68,15 @@ test-e2e:
 	go test -mod=readonly -failfast -timeout=15m -v $(PACKAGES_E2E) -count=1
 
 .PHONY: build help
+
+###############################################################################
+###                                Testing                                  ###
+###############################################################################
+
+test:
+	go test -race ./...
+
+e2e-test:
+	go test ./e2e -v
+
+.PHONY: test unit-test e2e-test

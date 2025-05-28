@@ -21,7 +21,6 @@ require (
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cometbft/cometbft v0.38.17
 	github.com/cosmos/cosmos-sdk v0.50.12
-	github.com/cosmos/relayer/v2 v2.5.2
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/jsternberg/zap-logfmt v1.3.0
 	github.com/lightningnetwork/lnd v0.17.0-beta

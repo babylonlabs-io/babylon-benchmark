@@ -3,12 +3,13 @@ package harness
 import (
 	"context"
 	"encoding/hex"
-	"github.com/avast/retry-go/v4"
-	"github.com/babylonlabs-io/babylon/app/params"
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/avast/retry-go/v4"
+	"github.com/babylonlabs-io/babylon/app/params"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 
 	bbn "github.com/babylonlabs-io/babylon/app"
 	"github.com/babylonlabs-io/babylon/client/config"

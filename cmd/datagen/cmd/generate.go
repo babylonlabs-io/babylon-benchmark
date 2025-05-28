@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/harness"
 	"github.com/spf13/cobra"
@@ -16,6 +17,10 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
+	rpcaddr              = "rpc-address"
+	keyName              = "key-name"
+	BabylonAddress       = "babylon-address"
+	grpcaddr             = "grpc-address"
 )
 
 // CommandGenerate generates data
@@ -38,6 +43,25 @@ func CommandGenerate() *cobra.Command {
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
 	f.Uint32(numMatureOutputsFlag, 4000, "Number of blocks to be mined")
+
+	return cmd
+}
+
+func CommandGenerateAndSaveKey() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "gen-key",
+		Aliases: []string{"gsk"},
+		Short:   "Generates new Bitcoin and Babylon keys and saves them to a file for remote node funding",
+		Example: `dgd gen-key --key-name my-key`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdGenerateAndSaveKeys,
+	}
+
+	f := cmd.Flags()
+	f.String(keyName, "", "Name of the key to generate")
+	if err := cmd.MarkFlagRequired(keyName); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -100,4 +124,22 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 	}
 
 	return harness.Run(cmd.Context(), cfg)
+}
+
+func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
+	flags := cmd.Flags()
+	keyName, err := flags.GetString(keyName)
+
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", keyName, err)
+	}
+
+	keys, err := harness.GenerateAndSaveKeys(keyName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Keys generated 💅 and saved to %s\nBabylon key 🔑 %s\nBitcoin key 🔑 %s\n", keyName+".export.json", keys.BabylonKey.Address, keys.BitcoinKey.Address)
+
+	return nil
 }
