@@ -17,10 +17,15 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
-	rpcaddr              = "rpc-address"
+	bbnrpcaddr           = "bbn-rpc-address"
 	keyName              = "key-name"
 	BabylonAddress       = "babylon-address"
-	grpcaddr             = "grpc-address"
+	bbngrpcaddr          = "bbn-grpc-address"
+	btcgrpcaddr          = "btc-grpc-addr"
+	btcrpcaddr           = "btc-rpc-addr"
+	btcpass              = "btc-pass"
+	btcuser              = "btcuser"
+	remotenode           = "remote-node"
 )
 
 // CommandGenerate generates data
@@ -43,6 +48,11 @@ func CommandGenerate() *cobra.Command {
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
 	f.Uint32(numMatureOutputsFlag, 4000, "Number of blocks to be mined")
+	f.Bool(remotenode, true, "Specifies if using remote node")
+	f.String(btcpass, "", "Bitcoin RPC password")
+	f.String(btcuser, "", "Bitcoin RPC user")
+	f.String(btcgrpcaddr, "", "Bitcoin gRPC address")
+	f.String(btcrpcaddr, "", "Bitcoin RPC address")
 
 	return cmd
 }
@@ -108,6 +118,31 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", numMatureOutputsFlag, err)
 	}
 
+	remoteNode, err := flags.GetBool(remotenode)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", remotenode, err)
+	}
+
+	btcpass, err := flags.GetString(btcpass)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", btcpass, err)
+	}
+
+	btcuser, err := flags.GetString(btcuser)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", btcuser, err)
+	}
+
+	btcgrpcaddr, err := flags.GetString(btcgrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", btcgrpcaddr, err)
+	}
+
+	btcrpcaddr, err := flags.GetString(btcrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", btcrpcaddr, err)
+	}
+
 	cfg := config.Config{
 		NumPubRand:             numPubRand,
 		TotalStakers:           totalStakers,
@@ -117,6 +152,11 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 		IavlCacheSize:          iavlCache,
 		IavlDisableFastnode:    disabledFastnode,
 		NumMatureOutputs:       numMatureOutputs,
+		UseRemote:              remoteNode,
+		BTCRPC:                 btcrpcaddr,
+		BTCGRPC:                btcgrpcaddr,
+		BTCPass:                btcpass,
+		BTCUser:                btcuser,
 	}
 
 	if err := cfg.Validate(); err != nil {

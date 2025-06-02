@@ -12,7 +12,6 @@ import (
 	"github.com/babylonlabs-io/babylon/client/babylonclient"
 
 	bbn "github.com/babylonlabs-io/babylon/app"
-	"github.com/babylonlabs-io/babylon/client/config"
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
 	"github.com/babylonlabs-io/babylon/client/query"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -50,7 +49,7 @@ type Client struct {
 }
 
 func New(
-	cfg *config.BabylonConfig) (*Client, error) {
+	cfg *bncfg.BabylonConfig) (*Client, error) {
 	var (
 		err error
 	)
@@ -109,6 +108,10 @@ type SenderWithBabylonClient struct {
 	PrvKey         cryptotypes.PrivKey
 	PubKey         cryptotypes.PubKey
 	BabylonAddress sdk.AccAddress
+}
+
+func ImportKey() {
+	// TODO
 }
 
 func NewSenderWithBabylonClient(
