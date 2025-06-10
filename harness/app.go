@@ -19,7 +19,10 @@ var (
 
 func Run(ctx context.Context, cfg config.Config) error {
 	if cfg.UseRemote {
-		startRemoteHarness(ctx, cfg)
+		if err := startRemoteHarness(ctx, cfg); err != nil {
+			return fmt.Errorf("failed to start remote harness: %w", err)
+		}
+		return nil
 	}
 	return startHarness(ctx, cfg)
 }
@@ -34,6 +37,10 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error starting btc client: %w", err)
 	}
 	defer btcClient.Stop()
+
+	if err := btcClient.importKey(cfg.HomeDir); err != nil {
+		return fmt.Errorf("error importing keys: %w", err)
+	}
 
 	bbncfg := bncfg.DefaultBabylonConfig()
 	_, err = New(&bbncfg)
