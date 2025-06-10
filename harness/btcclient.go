@@ -16,7 +16,7 @@ type BTCConfig struct {
 }
 
 type BTCClient struct {
-	TestRpcClient *rpcclient.Client
+	*rpcclient.Client
 	BTCConfig
 }
 
@@ -50,7 +50,7 @@ func (c *BTCClient) Start(runCfg benchcfg.Config) error {
 		return err
 	}
 
-	c.TestRpcClient = rpcClient
+	c.Client = rpcClient
 	return nil
 }
 
@@ -68,7 +68,7 @@ func (cfg *BTCConfig) importKey(path string) error {
 }
 
 func (c *BTCClient) Stop() {
-	if c.TestRpcClient != nil {
-		c.TestRpcClient.Shutdown()
+	if c.Client != nil {
+		c.Client.Shutdown()
 	}
 }

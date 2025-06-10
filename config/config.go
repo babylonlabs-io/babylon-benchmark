@@ -40,6 +40,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("num mature outputs should be greater than 0")
 	}
 
+	return nil
+}
+
+func (c *Config) ValidateRemote() error {
 	if c.UseRemote {
 		if c.BTCGRPC == "" {
 			return fmt.Errorf("btcrpc should not be empty")
@@ -48,7 +52,14 @@ func (c *Config) Validate() error {
 		if c.BTCGRPC == "" {
 			return fmt.Errorf("btcgrpc should not be empty")
 		}
-	}
 
+		if c.BTCPass == "" {
+			return fmt.Errorf("btcpass should not be empty")
+		}
+
+		if c.BTCUser == "" {
+			return fmt.Errorf("btcuser should not be empty")
+		}
+	}
 	return nil
 }
