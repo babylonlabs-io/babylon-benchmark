@@ -29,27 +29,32 @@ func NewBTCClient(runCfg benchcfg.Config) (*BTCClient, error) {
 			Password: runCfg.BTCPass,
 		},
 	}
+	return client, nil
+}
 
+func (c *BTCClient) Start(runCfg benchcfg.Config) error {
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:                 client.RPCAddr,
-		User:                 client.Username,
-		Pass:                 client.Password,
+		Host:                 c.RPCAddr,
+		User:                 c.Username,
+		Pass:                 c.Password,
 		DisableTLS:           true,
 		DisableConnectOnNew:  true,
 		DisableAutoReconnect: false,
 		HTTPPostMode:         true,
 	}, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	client.ImportKey(runCfg.HomeDir)
+	if err := c.importKey(runCfg.HomeDir); err != nil {
+		return err
+	}
 
-	client.TestRpcClient = rpcClient
-	return client, nil
+	c.TestRpcClient = rpcClient
+	return nil
 }
 
-func (cfg *BTCConfig) ImportKey(path string) error {
+func (cfg *BTCConfig) importKey(path string) error {
 	keys, err := LoadKeys(path)
 	if err != nil {
 		return err
@@ -59,6 +64,11 @@ func (cfg *BTCConfig) ImportKey(path string) error {
 	cfg.PrivKey = keys.BabylonKey.PubKey
 	cfg.BtcAddress = keys.BabylonKey.Address
 
-	
 	return nil
+}
+
+func (c *BTCClient) Stop() {
+	if c.TestRpcClient != nil {
+		c.TestRpcClient.Shutdown()
+	}
 }
