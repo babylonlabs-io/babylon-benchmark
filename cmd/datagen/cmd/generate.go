@@ -20,9 +20,9 @@ const (
 	keyName              = "key-name"
 	BabylonAddress       = "babylon-address"
 	grpcaddr             = "grpc-address"
-	babylongrpcaddr      = "babylon-grpc-address"
-	babylonrpcaddr       = "babylon-rpc-address"
-	btcrpcaddr           = "btc-rpc-addr"
+	babylonGRPCaddr      = "babylon-grpc-address"
+	babylonRPCaddr       = "babylon-rpc-address"
+	btcRPCaddr           = "btc-rpc-addr"
 	btcpass              = "btc-pass"
 	btcuser              = "btcuser"
 	remotenode           = "remote-node"
@@ -93,23 +93,18 @@ func CommandGenerateRemote() *cobra.Command {
 		panic(err)
 	}
 
-	f.String(btcgrpcaddr, "", "Bitcoin gRPC address")
-	if err := cmd.MarkFlagRequired(btcgrpcaddr); err != nil {
+	f.String(btcRPCaddr, "", "Bitcoin RPC address")
+	if err := cmd.MarkFlagRequired(btcRPCaddr); err != nil {
 		panic(err)
 	}
 
-	f.String(btcrpcaddr, "", "Bitcoin RPC address")
-	if err := cmd.MarkFlagRequired(btcrpcaddr); err != nil {
+	f.String(babylonGRPCaddr, "", "Babylon gRPC address")
+	if err := cmd.MarkFlagRequired(babylonGRPCaddr); err != nil {
 		panic(err)
 	}
 
-	f.String(babylongrpcaddr, "", "Babylon gRPC address")
-	if err := cmd.MarkFlagRequired(babylongrpcaddr); err != nil {
-		panic(err)
-	}
-
-	f.String(babylonrpcaddr, "", "Babylon RPC address")
-	if err := cmd.MarkFlagRequired(babylonrpcaddr); err != nil {
+	f.String(babylonRPCaddr, "", "Babylon RPC address")
+	if err := cmd.MarkFlagRequired(babylonRPCaddr); err != nil {
 		panic(err)
 	}
 
@@ -123,14 +118,9 @@ func CommandGenerateRemote() *cobra.Command {
 
 func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
-	btcrpcaddr, err := flags.GetString(btcrpcaddr)
+	btcRPCaddr, err := flags.GetString(btcRPCaddr)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s", btcrpcaddr)
-	}
-
-	btcgrpcaddr, err := flags.GetString(btcgrpcaddr)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s", btcgrpcaddr)
+		return fmt.Errorf("failed to read flag %s", btcRPCaddr)
 	}
 
 	btcuser, err := flags.GetString(btcuser)
@@ -143,14 +133,14 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", btcpass)
 	}
 
-	babylongrpcaddr, err := flags.GetString(babylongrpcaddr)
+	babylonGRPCaddr, err := flags.GetString(babylonGRPCaddr)
 	if err != nil {
-		return fmt.Errorf("failed to read flag: %s", babylongrpcaddr)
+		return fmt.Errorf("failed to read flag: %s", babylonGRPCaddr)
 	}
 
-	babylonrpcaddr, err := flags.GetString(babylonrpcaddr)
+	babylonRPCaddr, err := flags.GetString(babylonRPCaddr)
 	if err != nil {
-		return fmt.Errorf("failed to read flag: %s", babylonrpcaddr)
+		return fmt.Errorf("failed to read flag: %s", babylonRPCaddr)
 	}
 
 	keys, err := flags.GetString(keys)
@@ -159,8 +149,8 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 	}
 
 	cfg := config.Config{
-		BabylonRPC:  babylonrpcaddr,
-		BabylonGRPC: babylongrpcaddr,
+		BabylonRPC:  babylonRPCaddr,
+		BabylonGRPC: babylonGRPCaddr,
 		BTCPass:     btcpass,
 		BTCUser:     btcuser,
 		Keys:        keys,
