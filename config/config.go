@@ -11,6 +11,7 @@ type Config struct {
 	BabylonPath            string
 	IavlDisableFastnode    bool
 	IavlCacheSize          uint
+	BTCRPC                 string
 	BabylonRPC             string
 	BabylonGRPC            string
 	BTCPass                string
