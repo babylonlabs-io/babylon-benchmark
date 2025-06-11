@@ -11,13 +11,11 @@ type Config struct {
 	BabylonPath            string
 	IavlDisableFastnode    bool
 	IavlCacheSize          uint
-	BTCRPC                 string
-	BBNRPC                 string
-	BBNGRPC                string
-	BTCGRPC                string
+	BabylonRPC             string
+	BabylonGRPC            string
 	BTCPass                string
 	BTCUser                string
-	PathToKeyExport        string
+	Keys                   string
 }
 
 func (c *Config) Validate() error {
