@@ -91,32 +91,6 @@ func (s *BTCRemoteStaker) Start(ctx context.Context) error {
 }
 
 func (s *BTCRemoteStaker) runForever(ctx context.Context, stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			paramsResp, err := s.client.BTCStakingParams()
-			if err != nil {
-				fmt.Printf("🚫 Err getting staking params %v\n", err)
-				continue
-			}
-
-			// each round rnd FP to delegate
-			s.fpPK = s.randomFpPK()
-
-			if err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params); err != nil {
-				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
-				if strings.Contains(err.Error(), "insufficient funds") {
-					if s.requestFunding(ctx) {
-						fmt.Printf("✅ Received funding for %s\n", s.client.BabylonAddress.String())
-					} else {
-						fmt.Printf("🚫 Funding timeout or context canceled for %s\n", s.client.BabylonAddress.String())
-					}
-				}
-			}
-		}
-	}
 }
 
 func (s *BTCStaker) Start(ctx context.Context) error {

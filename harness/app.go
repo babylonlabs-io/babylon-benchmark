@@ -9,8 +9,6 @@ import (
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
-	"github.com/babylonlabs-io/babylon/x/finality/types"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
 )
 
