@@ -190,7 +190,7 @@ func CommandGenerateRemote() *cobra.Command {
 	if err := cmd.MarkFlagRequired(bbngrpcaddr); err != nil {
 		panic(err)
 	}
-	
+
 	f.String(bbnrpcaddr, "", "Babylon RPC address")
 	if err := cmd.MarkFlagRequired(bbnrpcaddr); err != nil {
 		panic(err)
@@ -237,13 +237,12 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 	}
 
 	cfg := config.Config{
-		BTCRPC:          btcrpcaddr,
-		BTCGRPC:         btcgrpcaddr,
-		BTCPass:         btcpass,
-		BTCUser:         btcuser,
-		BBNGRPC:         bbngrpcaddr,
-		BBNRPC:          bbnrpcaddr,
-		PathToKeyExport: pathToKeyExport,
+		BTCRPC:      btcrpcaddr,
+		BTCPass:     btcpass,
+		BTCUser:     btcuser,
+		BabylonGRPC: bbngrpcaddr,
+		BabylonRPC:  bbnrpcaddr,
+		Keys:        pathToKeyExport,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {

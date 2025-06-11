@@ -32,8 +32,8 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	}
 
 	bbncfg := bncfg.DefaultBabylonConfig()
-	bbncfg.RPCAddr = cfg.BBNRPC
-	bbncfg.GRPCAddr = cfg.BBNGRPC
+	bbncfg.RPCAddr = cfg.BabylonRPC
+	bbncfg.GRPCAddr = cfg.BabylonGRPC
 	bbnClient, err := New(&bbncfg)
 	if err != nil {
 		return fmt.Errorf("error creating babylon client: %w", err)
