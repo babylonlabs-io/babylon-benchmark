@@ -17,7 +17,7 @@ type Config struct {
 	BTCGRPC                string
 	BTCPass                string
 	BTCUser                string
-	PathToKeyExport        string
+	Keys                   string
 }
 
 func (c *Config) Validate() error {
