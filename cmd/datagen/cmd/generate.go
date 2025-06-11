@@ -167,12 +167,39 @@ func CommandGenerateRemote() *cobra.Command {
 
 	f := cmd.Flags()
 	f.String(btcpass, "", "Bitcoin RPC password")
+	if err := cmd.MarkFlagRequired(btcpass); err != nil {
+		panic(err)
+	}
+
 	f.String(btcuser, "", "Bitcoin RPC user")
+	if err := cmd.MarkFlagRequired(btcuser); err != nil {
+		panic(err)
+	}
+
 	f.String(btcgrpcaddr, "", "Bitcoin gRPC address")
+	if err := cmd.MarkFlagRequired(btcgrpcaddr); err != nil {
+		panic(err)
+	}
+
 	f.String(btcrpcaddr, "", "Bitcoin RPC address")
+	if err := cmd.MarkFlagRequired(btcrpcaddr); err != nil {
+		panic(err)
+	}
+
 	f.String(bbngrpcaddr, "", "Babylon gRPC address")
-	f.String(bbngrpcaddr, "", "Babylon RPC address")
+	if err := cmd.MarkFlagRequired(bbngrpcaddr); err != nil {
+		panic(err)
+	}
+	
+	f.String(bbnrpcaddr, "", "Babylon RPC address")
+	if err := cmd.MarkFlagRequired(bbnrpcaddr); err != nil {
+		panic(err)
+	}
+
 	f.String(pathToKeyExport, "", "File path to key export")
+	if err := cmd.MarkFlagRequired(pathToKeyExport); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }

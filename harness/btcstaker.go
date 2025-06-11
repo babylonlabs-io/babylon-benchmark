@@ -38,6 +38,37 @@ type BTCStaker struct {
 	fundingResponse chan sdk.AccAddress
 }
 
+type BTCRemoteStaker struct {
+	tm               *TestManager
+	client           *Client
+	fpPK             *btcec.PublicKey
+	fpPKChunk        []*btcec.PublicKey
+	fundingRequest   chan sdk.AccAddress
+	fundingResponse  chan sdk.AccAddress
+	bbnStakerAddress sdk.AccAddress
+	btcStakerAddress btcutil.Address
+}
+
+func NewBTCRemoteStaker(
+	tm *TestManager,
+	client *Client,
+	finalityProvidersPublicKey []*btcec.PublicKey,
+	fundingRequest chan sdk.AccAddress,
+	fundingResponse chan sdk.AccAddress,
+	stakerAddress sdk.AccAddress,
+	btcStakerAddress btcutil.Address,
+) *BTCRemoteStaker {
+	return &BTCRemoteStaker{
+		tm:               tm,
+		client:           client,
+		fpPKChunk:        finalityProvidersPublicKey,
+		fundingRequest:   fundingRequest,
+		fundingResponse:  fundingResponse,
+		bbnStakerAddress: stakerAddress,
+		btcStakerAddress: btcStakerAddress,
+	}
+}
+
 func NewBTCStaker(
 	tm *TestManager,
 	client *SenderWithBabylonClient,
@@ -54,11 +85,46 @@ func NewBTCStaker(
 	}
 }
 
+func (s *BTCRemoteStaker) Start(ctx context.Context) error {
+	go s.runForever(ctx, s.btcStakerAddress, s.fpPK)
+	return nil
+}
+
+func (s *BTCRemoteStaker) runForever(ctx context.Context, stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			paramsResp, err := s.client.BTCStakingParams()
+			if err != nil {
+				fmt.Printf("🚫 Err getting staking params %v\n", err)
+				continue
+			}
+
+			// each round rnd FP to delegate
+			s.fpPK = s.randomFpPK()
+
+			if err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params); err != nil {
+				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
+				if strings.Contains(err.Error(), "insufficient funds") {
+					if s.requestFunding(ctx) {
+						fmt.Printf("✅ Received funding for %s\n", s.client.BabylonAddress.String())
+					} else {
+						fmt.Printf("🚫 Funding timeout or context canceled for %s\n", s.client.BabylonAddress.String())
+					}
+				}
+			}
+		}
+	}
+}
+
 func (s *BTCStaker) Start(ctx context.Context) error {
 	stakerAddress, err := s.tm.TestRpcClient.GetNewAddress("")
 	if err != nil {
 		return err
 	}
+
 	stakerInfo, err := s.tm.TestRpcClient.GetAddressInfo(stakerAddress.String())
 	if err != nil {
 		return err

@@ -44,8 +44,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	var stakers []*BTCStaker
 	for i := 0; i < cfg.TotalStakers; i++ {
 
-		stakers = append(stakers, NewBTCStaker(nil, stakerSender, nil, nil, nil))
-
+		stakers = append(stakers, NewBTCRemoteStaker(nil, bbnClient, nil, bbnClient.BabylonAddress, nil, nil))
 
 	}
 
