@@ -22,7 +22,6 @@ const (
 	grpcaddr             = "grpc-address"
 	babylongrpcaddr      = "babylon-grpc-address"
 	babylonrpcaddr       = "babylon-rpc-address"
-	btcgrpcaddr          = "btc-grpc-addr"
 	btcrpcaddr           = "btc-rpc-addr"
 	btcpass              = "btc-pass"
 	btcuser              = "btcuser"
