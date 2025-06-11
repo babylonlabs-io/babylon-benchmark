@@ -45,7 +45,7 @@ func (c *BTCClient) Start(runCfg benchcfg.Config) error {
 		return err
 	}
 
-	if err := c.importKey(runCfg.PathToKeyExport); err != nil {
+	if err := c.importKey(runCfg.Keys); err != nil {
 		return err
 	}
 
