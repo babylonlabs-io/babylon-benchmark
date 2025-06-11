@@ -24,7 +24,7 @@ const (
 	babylonRPCaddr       = "babylon-rpc-address"
 	btcRPCaddr           = "btc-rpc-addr"
 	btcpass              = "btc-pass"
-	btcuser              = "btcuser"
+	btcuser              = "btc-user"
 	keys                 = "keys"
 )
 
