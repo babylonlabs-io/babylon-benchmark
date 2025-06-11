@@ -17,10 +17,15 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
-	rpcaddr              = "rpc-address"
 	keyName              = "key-name"
 	BabylonAddress       = "babylon-address"
 	grpcaddr             = "grpc-address"
+	babylonGRPCaddr      = "babylon-grpc-address"
+	babylonRPCaddr       = "babylon-rpc-address"
+	btcRPCaddr           = "btc-rpc-addr"
+	btcpass              = "btc-pass"
+	btcuser              = "btc-user"
+	keys                 = "keys"
 )
 
 // CommandGenerate generates data
@@ -64,6 +69,99 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func CommandGenerateRemote() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "generate remote",
+		Aliases: []string{"gr"},
+		Short:   "Generates delegations with remote babylon and bitcoin nodes",
+		Example: `dgd generate-remote --babylon-rpc-addr http://localhost:26657 --babylon-grpc-addr http://localhost:9090 --btc-rpc-addr http://localhost:8332 --keys /path/to/keys --btc-user "username" --btc-pass "btcpassword"`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdGenerateRemote,
+	}
+
+	f := cmd.Flags()
+	f.String(btcpass, "", "Bitcoin RPC password")
+	if err := cmd.MarkFlagRequired(btcpass); err != nil {
+		panic(err)
+	}
+
+	f.String(btcuser, "", "Bitcoin RPC user")
+	if err := cmd.MarkFlagRequired(btcuser); err != nil {
+		panic(err)
+	}
+
+	f.String(btcRPCaddr, "", "Bitcoin RPC address")
+	if err := cmd.MarkFlagRequired(btcRPCaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(babylonGRPCaddr, "", "Babylon gRPC address")
+	if err := cmd.MarkFlagRequired(babylonGRPCaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(babylonRPCaddr, "", "Babylon RPC address")
+	if err := cmd.MarkFlagRequired(babylonRPCaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(keys, "", "Path to btc and babylon key pairs that will be used for remote node funding")
+	if err := cmd.MarkFlagRequired(keys); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
+	flags := cmd.Flags()
+	btcRPCaddr, err := flags.GetString(btcRPCaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s", btcRPCaddr)
+	}
+
+	btcuser, err := flags.GetString(btcuser)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", btcuser)
+	}
+
+	btcpass, err := flags.GetString(btcpass)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", btcpass)
+	}
+
+	babylonGRPCaddr, err := flags.GetString(babylonGRPCaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", babylonGRPCaddr)
+	}
+
+	babylonRPCaddr, err := flags.GetString(babylonRPCaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", babylonRPCaddr)
+	}
+
+	keys, err := flags.GetString(keys)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", keys)
+	}
+
+	cfg := config.Config{
+		BabylonRPC:  babylonRPCaddr,
+		BabylonGRPC: babylonGRPCaddr,
+		BTCPass:     btcpass,
+		BTCUser:     btcuser,
+		Keys:        keys,
+	}
+
+	if err := cfg.ValidateRemote(); err != nil {
+		return err
+	}
+
+	// harness.RunRemote(cmd.Context(), cfg)
+
+	return nil
 }
 
 func cmdGenerate(cmd *cobra.Command, _ []string) error {
