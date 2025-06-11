@@ -23,8 +23,8 @@ type BTCClient struct {
 func NewBTCClient(runCfg benchcfg.Config) (*BTCClient, error) {
 	client := &BTCClient{
 		BTCConfig: BTCConfig{
-			RPCAddr:  runCfg.BTCRPC,
-			GRPCAddr: runCfg.BTCGRPC,
+			RPCAddr:  runCfg.BabylonRPC,
+			GRPCAddr: runCfg.BabylonGRPC,
 			Username: runCfg.BTCUser,
 			Password: runCfg.BTCPass,
 		},
