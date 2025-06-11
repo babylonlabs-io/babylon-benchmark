@@ -97,6 +97,7 @@ func New(
 		return nil, err
 	}
 
+
 	return &Client{
 		queryClient,
 		cp,
@@ -195,4 +196,19 @@ func senders(stakers []*BTCStaker) []*SenderWithBabylonClient {
 		sends = append(sends, stakerCp.client)
 	}
 	return sends
+}
+
+func (c *Client) importKeys(path string) error {
+	keys, err := LoadKeys(path)
+	if err != nil {
+		return err
+	}
+
+	c.provider.Keybase.ImportPrivKeyHex(
+		keys.BabylonKey.KeyName,
+		hex.EncodeToString([]byte(keys.BabylonKey.PrivKey)),
+		"secp256k1",
+	)
+
+	return nil
 }

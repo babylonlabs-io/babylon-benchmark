@@ -18,13 +18,11 @@ var (
 )
 
 func Run(ctx context.Context, cfg config.Config) error {
-	if cfg.UseRemote {
-		if err := startRemoteHarness(ctx, cfg); err != nil {
-			return fmt.Errorf("failed to start remote harness: %w", err)
-		}
-		return nil
-	}
 	return startHarness(ctx, cfg)
+}
+
+func RunRemote(ctx context.Context, cfg config.Config) error {
+	return startRemoteHarness(ctx, cfg)
 }
 
 func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
@@ -33,20 +31,31 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error creating btc client: %w", err)
 	}
 
+	bbncfg := bncfg.DefaultBabylonConfig()
+	bbncfg.RPCAddr = cfg.BBNRPC
+	bbncfg.GRPCAddr = cfg.BBNGRPC
+	bbnClient, err := New(&bbncfg)
+	if err != nil {
+		return fmt.Errorf("error creating babylon client: %w", err)
+	}
+
+	bbnClient.importKeys(cfg.BabylonPath)
+
+	var stakers []*BTCStaker
+	for i := 0; i < cfg.TotalStakers; i++ {
+
+		stakers = append(stakers, NewBTCStaker(nil, stakerSender, nil, nil, nil))
+
+
+	}
+
 	if err := btcClient.Start(cfg); err != nil {
 		return fmt.Errorf("error starting btc client: %w", err)
 	}
 	defer btcClient.Stop()
 
-	if err := btcClient.importKey(cfg.HomeDir); err != nil {
-		return fmt.Errorf("error importing keys: %w", err)
-	}
-
-	bbncfg := bncfg.DefaultBabylonConfig()
-	_, err = New(&bbncfg)
-	if err != nil {
-		return fmt.Errorf("error creating babylon client: %w", err)
-	}
+	bbnClient.Start()
+	defer bbnClient.Stop()
 
 	return nil
 }

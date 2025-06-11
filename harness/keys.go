@@ -16,6 +16,7 @@ type Key struct {
 	PubKey  string `json:"pubkey"`
 	PrivKey string `json:"privkey"`
 	Address string `json:"address"`
+	KeyName string `json:"key_name"`
 }
 
 type KeyExport struct {
@@ -46,6 +47,7 @@ func GenerateAndSaveKeys(keyName string) (*KeyExport, error) {
 		PubKey:  hex.EncodeToString(pubKey.Bytes()),
 		PrivKey: hex.EncodeToString(privKey.Bytes()),
 		Address: address.String(),
+		KeyName: keyName,
 	}
 
 	btcKey := Key{
