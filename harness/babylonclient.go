@@ -111,10 +111,6 @@ type SenderWithBabylonClient struct {
 	BabylonAddress sdk.AccAddress
 }
 
-func ImportKey() {
-	// TODO
-}
-
 func NewSenderWithBabylonClient(
 	ctx context.Context,
 	keyName string,

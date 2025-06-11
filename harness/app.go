@@ -9,6 +9,8 @@ import (
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
+	"github.com/babylonlabs-io/babylon/x/finality/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
 )
 
@@ -40,13 +42,6 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	}
 
 	bbnClient.importKeys(cfg.BabylonPath)
-
-	var stakers []*BTCStaker
-	for i := 0; i < cfg.TotalStakers; i++ {
-
-		stakers = append(stakers, NewBTCRemoteStaker(nil, bbnClient, nil, bbnClient.BabylonAddress, nil, nil))
-
-	}
 
 	if err := btcClient.Start(cfg); err != nil {
 		return fmt.Errorf("error starting btc client: %w", err)
