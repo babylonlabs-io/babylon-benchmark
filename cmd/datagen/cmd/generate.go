@@ -160,13 +160,11 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 	}
 
 	cfg := config.Config{
-		BTCRPC:  btcrpcaddr,
-		BTCGRPC: btcgrpcaddr,
-		BTCPass: btcpass,
-		BTCUser: btcuser,
-		BBNGRPC: babylongrpcaddr,
-		BBNRPC:  babylonrpcaddr,
-		Keys:    keys,
+		BabylonRPC:  babylonrpcaddr,
+		BabylonGRPC: babylongrpcaddr,
+		BTCPass:     btcpass,
+		BTCUser:     btcuser,
+		Keys:        keys,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {
