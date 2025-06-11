@@ -12,9 +12,8 @@ type Config struct {
 	IavlDisableFastnode    bool
 	IavlCacheSize          uint
 	BTCRPC                 string
-	BBNRPC                 string
-	BBNGRPC                string
-	BTCGRPC                string
+	BabylonRPC             string
+	BabylonGRPC            string
 	BTCPass                string
 	BTCUser                string
 	Keys                   string
@@ -45,12 +44,12 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) ValidateRemote() error {
-	if c.BTCGRPC == "" {
-		return fmt.Errorf("btcrpc should not be empty")
+	if c.BabylonRPC == "" {
+		return fmt.Errorf("babylonrpc should not be empty")
 	}
 
-	if c.BTCGRPC == "" {
-		return fmt.Errorf("btcgrpc should not be empty")
+	if c.BabylonGRPC == "" {
+		return fmt.Errorf("babylongrpc should not be empty")
 	}
 
 	if c.BTCPass == "" {
