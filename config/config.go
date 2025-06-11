@@ -61,8 +61,8 @@ func (c *Config) ValidateRemote() error {
 		return fmt.Errorf("btcuser should not be empty")
 	}
 
-	if c.PathToKeyExport == "" {
-		return fmt.Errorf("path to key export should not be empty")
+	if c.Keys == "" {
+		return fmt.Errorf("keys should not be empty")
 	}
 
 	return nil
