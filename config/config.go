@@ -11,6 +11,13 @@ type Config struct {
 	BabylonPath            string
 	IavlDisableFastnode    bool
 	IavlCacheSize          uint
+	BTCRPC                 string
+	BBNRPC                 string
+	BBNGRPC                string
+	BTCGRPC                string
+	BTCPass                string
+	BTCUser                string
+	PathToKeyExport        string
 }
 
 func (c *Config) Validate() error {
@@ -32,6 +39,30 @@ func (c *Config) Validate() error {
 
 	if c.NumMatureOutputs <= 0 {
 		return fmt.Errorf("num mature outputs should be greater than 0")
+	}
+
+	return nil
+}
+
+func (c *Config) ValidateRemote() error {
+	if c.BTCGRPC == "" {
+		return fmt.Errorf("btcrpc should not be empty")
+	}
+
+	if c.BTCGRPC == "" {
+		return fmt.Errorf("btcgrpc should not be empty")
+	}
+
+	if c.BTCPass == "" {
+		return fmt.Errorf("btcpass should not be empty")
+	}
+
+	if c.BTCUser == "" {
+		return fmt.Errorf("btcuser should not be empty")
+	}
+
+	if c.PathToKeyExport == "" {
+		return fmt.Errorf("path to key export should not be empty")
 	}
 
 	return nil
