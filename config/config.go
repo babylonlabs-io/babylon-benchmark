@@ -44,6 +44,10 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) ValidateRemote() error {
+	if c.BabylonRPC == "" {
+		return fmt.Errorf("babylonrpc should not be empty")
+	}
+  
 	if c.BabylonGRPC == "" {
 		return fmt.Errorf("babylongrpc should not be empty")
 	}
@@ -57,7 +61,7 @@ func (c *Config) ValidateRemote() error {
 	}
 
 	if c.Keys == "" {
-		return fmt.Errorf("path to key export should not be empty")
+		return fmt.Errorf("keys should not be empty")
 	}
 
 	return nil
