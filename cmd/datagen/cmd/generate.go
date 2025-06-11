@@ -17,10 +17,16 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
-	rpcaddr              = "rpc-address"
+	bbnrpcaddr           = "bbn-rpc-address"
 	keyName              = "key-name"
 	BabylonAddress       = "babylon-address"
-	grpcaddr             = "grpc-address"
+	bbngrpcaddr          = "bbn-grpc-address"
+	btcgrpcaddr          = "btc-grpc-addr"
+	btcrpcaddr           = "btc-rpc-addr"
+	btcpass              = "btc-pass"
+	btcuser              = "btcuser"
+	remotenode           = "remote-node"
+	pathToKeyExport      = "path-to-key-export"
 )
 
 // CommandGenerate generates data
@@ -43,6 +49,11 @@ func CommandGenerate() *cobra.Command {
 	f.Bool(iavlDisabledFastnode, true, "IAVL disabled fast node (additional fast node cache) (optional)")
 	f.Uint(iavlCacheSize, 0, "IAVL cache size, note cache too big can cause OOM, 100k -> ~20 GB of RAM (optional)")
 	f.Uint32(numMatureOutputsFlag, 4000, "Number of blocks to be mined")
+	f.Bool(remotenode, true, "Specifies if using remote node")
+	f.String(btcpass, "", "Bitcoin RPC password")
+	f.String(btcuser, "", "Bitcoin RPC user")
+	f.String(btcgrpcaddr, "", "Bitcoin gRPC address")
+	f.String(btcrpcaddr, "", "Bitcoin RPC address")
 
 	return cmd
 }
@@ -142,4 +153,102 @@ func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("Keys generated 💅 and saved to %s\nBabylon key 🔑 %s\nBitcoin key 🔑 %s\n", keyName+".export.json", keys.BabylonKey.Address, keys.BitcoinKey.Address)
 
 	return nil
+}
+
+func CommandGenerateRemote() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "generate remote",
+		Aliases: []string{"gr"},
+		Short:   "Generates delegations with remote babylon and bitcoin nodes",
+		Example: `dgd generate-remote --babylon-path /path/to/babylon --bbn-rpc-addr http://localhost:26657 --bbn-grpc-addr http://localhost:9090 --btc-rpc-addr http://localhost:8332 --btc-grpc-addr http://localhost:11000 --home /path/to/keys`,
+		Args:    cobra.NoArgs,
+		RunE:    cmdGenerateRemote,
+	}
+
+	f := cmd.Flags()
+	f.String(btcpass, "", "Bitcoin RPC password")
+	if err := cmd.MarkFlagRequired(btcpass); err != nil {
+		panic(err)
+	}
+
+	f.String(btcuser, "", "Bitcoin RPC user")
+	if err := cmd.MarkFlagRequired(btcuser); err != nil {
+		panic(err)
+	}
+
+	f.String(btcgrpcaddr, "", "Bitcoin gRPC address")
+	if err := cmd.MarkFlagRequired(btcgrpcaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(btcrpcaddr, "", "Bitcoin RPC address")
+	if err := cmd.MarkFlagRequired(btcrpcaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(bbngrpcaddr, "", "Babylon gRPC address")
+	if err := cmd.MarkFlagRequired(bbngrpcaddr); err != nil {
+		panic(err)
+	}
+	
+	f.String(bbnrpcaddr, "", "Babylon RPC address")
+	if err := cmd.MarkFlagRequired(bbnrpcaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(pathToKeyExport, "", "File path to key export")
+	if err := cmd.MarkFlagRequired(pathToKeyExport); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
+	flags := cmd.Flags()
+	btcrpcaddr, err := flags.GetString(btcrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s", btcrpcaddr)
+	}
+
+	btcgrpcaddr, err := flags.GetString(btcgrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s", btcgrpcaddr)
+	}
+
+	btcuser, err := flags.GetString(btcuser)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", btcuser)
+	}
+
+	btcpass, err := flags.GetString(btcpass)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", btcpass)
+	}
+
+	bbngrpcaddr, err := flags.GetString(bbngrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", bbngrpcaddr)
+	}
+
+	bbnrpcaddr, err := flags.GetString(bbnrpcaddr)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", bbnrpcaddr)
+	}
+
+	cfg := config.Config{
+		BTCRPC:          btcrpcaddr,
+		BTCGRPC:         btcgrpcaddr,
+		BTCPass:         btcpass,
+		BTCUser:         btcuser,
+		BBNGRPC:         bbngrpcaddr,
+		BBNRPC:          bbnrpcaddr,
+		PathToKeyExport: pathToKeyExport,
+	}
+
+	if err := cfg.ValidateRemote(); err != nil {
+		return err
+	}
+
+	return harness.RunRemote(cmd.Context(), cfg)
 }

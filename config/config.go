@@ -42,3 +42,27 @@ func (c *Config) Validate() error {
 
 	return nil
 }
+
+func (c *Config) ValidateRemote() error {
+	if c.BTCGRPC == "" {
+		return fmt.Errorf("btcrpc should not be empty")
+	}
+
+	if c.BTCGRPC == "" {
+		return fmt.Errorf("btcgrpc should not be empty")
+	}
+
+	if c.BTCPass == "" {
+		return fmt.Errorf("btcpass should not be empty")
+	}
+
+	if c.BTCUser == "" {
+		return fmt.Errorf("btcuser should not be empty")
+	}
+
+	if c.PathToKeyExport == "" {
+		return fmt.Errorf("path to key export should not be empty")
+	}
+
+	return nil
+}

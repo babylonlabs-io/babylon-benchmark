@@ -38,6 +38,37 @@ type BTCStaker struct {
 	fundingResponse chan sdk.AccAddress
 }
 
+type BTCRemoteStaker struct {
+	tm               *TestManager
+	client           *Client
+	fpPK             *btcec.PublicKey
+	fpPKChunk        []*btcec.PublicKey
+	fundingRequest   chan sdk.AccAddress
+	fundingResponse  chan sdk.AccAddress
+	bbnStakerAddress sdk.AccAddress
+	btcStakerAddress btcutil.Address
+}
+
+func NewBTCRemoteStaker(
+	tm *TestManager,
+	client *Client,
+	finalityProvidersPublicKey []*btcec.PublicKey,
+	fundingRequest chan sdk.AccAddress,
+	fundingResponse chan sdk.AccAddress,
+	stakerAddress sdk.AccAddress,
+	btcStakerAddress btcutil.Address,
+) *BTCRemoteStaker {
+	return &BTCRemoteStaker{
+		tm:               tm,
+		client:           client,
+		fpPKChunk:        finalityProvidersPublicKey,
+		fundingRequest:   fundingRequest,
+		fundingResponse:  fundingResponse,
+		bbnStakerAddress: stakerAddress,
+		btcStakerAddress: btcStakerAddress,
+	}
+}
+
 func NewBTCStaker(
 	tm *TestManager,
 	client *SenderWithBabylonClient,
@@ -54,11 +85,20 @@ func NewBTCStaker(
 	}
 }
 
+func (s *BTCRemoteStaker) Start(ctx context.Context) error {
+	go s.runForever(ctx, s.btcStakerAddress, s.fpPK)
+	return nil
+}
+
+func (s *BTCRemoteStaker) runForever(ctx context.Context, stakerAddress btcutil.Address, stakerPk *btcec.PublicKey) {
+}
+
 func (s *BTCStaker) Start(ctx context.Context) error {
 	stakerAddress, err := s.tm.TestRpcClient.GetNewAddress("")
 	if err != nil {
 		return err
 	}
+
 	stakerInfo, err := s.tm.TestRpcClient.GetAddressInfo(stakerAddress.String())
 	if err != nil {
 		return err

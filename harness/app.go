@@ -3,11 +3,13 @@ package harness
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/babylon-benchmark/config"
-	"github.com/babylonlabs-io/babylon-benchmark/container"
-	"go.uber.org/zap"
 	"sync/atomic"
 	"time"
+
+	"github.com/babylonlabs-io/babylon-benchmark/config"
+	"github.com/babylonlabs-io/babylon-benchmark/container"
+	bncfg "github.com/babylonlabs-io/babylon/client/config"
+	"go.uber.org/zap"
 )
 
 var (
@@ -19,14 +21,43 @@ func Run(ctx context.Context, cfg config.Config) error {
 	return startHarness(ctx, cfg)
 }
 
+func RunRemote(ctx context.Context, cfg config.Config) error {
+	return startRemoteHarness(ctx, cfg)
+}
+
+func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
+	btcClient, err := NewBTCClient(cfg)
+	if err != nil {
+		return fmt.Errorf("error creating btc client: %w", err)
+	}
+
+	bbncfg := bncfg.DefaultBabylonConfig()
+	bbncfg.RPCAddr = cfg.BBNRPC
+	bbncfg.GRPCAddr = cfg.BBNGRPC
+	bbnClient, err := New(&bbncfg)
+	if err != nil {
+		return fmt.Errorf("error creating babylon client: %w", err)
+	}
+
+	bbnClient.importKeys(cfg.BabylonPath)
+
+	if err := btcClient.Start(cfg); err != nil {
+		return fmt.Errorf("error starting btc client: %w", err)
+	}
+	defer btcClient.Stop()
+
+	bbnClient.Start()
+	defer bbnClient.Stop()
+
+	return nil
+}
+
 func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	ctx, cancel := context.WithCancel(cmdCtx)
 	defer cancel()
-
 	numStakers := cfg.TotalStakers
 	numFinalityProviders := cfg.TotalFinalityProviders
 	stopChan := make(chan struct{}) // for stopping when we reach totalDelegations
-
 	tm, err := StartManager(ctx, cfg.NumMatureOutputs, 5, cfg)
 	if err != nil {
 		return err
@@ -132,6 +163,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	return nil
 }
+
 func printStatsForever(ctx context.Context, tm *TestManager, stopChan chan struct{}, cfg config.Config) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
