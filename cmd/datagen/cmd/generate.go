@@ -25,7 +25,6 @@ const (
 	btcRPCaddr           = "btc-rpc-addr"
 	btcpass              = "btc-pass"
 	btcuser              = "btcuser"
-	remotenode           = "remote-node"
 	keys                 = "keys"
 )
 
@@ -77,7 +76,7 @@ func CommandGenerateRemote() *cobra.Command {
 		Use:     "generate remote",
 		Aliases: []string{"gr"},
 		Short:   "Generates delegations with remote babylon and bitcoin nodes",
-		Example: `dgd generate-remote --babylon-rpc-addr http://localhost:26657 --babylon-grpc-addr http://localhost:9090 --btc-rpc-addr http://localhost:8332 --keys /path/to/keys`,
+		Example: `dgd generate-remote --babylon-rpc-addr http://localhost:26657 --babylon-grpc-addr http://localhost:9090 --btc-rpc-addr http://localhost:8332 --keys /path/to/keys --btc-user "username" --btc-pass "btcpassword"`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerateRemote,
 	}
