@@ -41,14 +41,6 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	bbnClient.importKeys(cfg.BabylonPath)
 
-	var stakers []*BTCStaker
-	for i := 0; i < cfg.TotalStakers; i++ {
-
-		stakers = append(stakers, NewBTCStaker(nil, stakerSender, nil, nil, nil))
-
-
-	}
-
 	if err := btcClient.Start(cfg); err != nil {
 		return fmt.Errorf("error starting btc client: %w", err)
 	}
