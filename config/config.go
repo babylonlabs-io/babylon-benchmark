@@ -17,6 +17,8 @@ type Config struct {
 	BTCPass                string
 	BTCUser                string
 	Keys                   string
+	WalletName             string
+	WalletPassphrase       string
 }
 
 func (c *Config) Validate() error {
