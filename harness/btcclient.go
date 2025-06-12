@@ -4,30 +4,22 @@ import (
 	"fmt"
 	"strings"
 
-	benchcfg "github.com/babylonlabs-io/babylon-benchmark/config"
+	"github.com/babylonlabs-io/babylon-benchmark/config"
+
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
-type BTCConfig struct {
-	RPCAddr    string
-	GRPCAddr   string
-	BtcAddress string
-	PrivKey    string
-	Username   string
-	Password   string
-	WalletName string
-}
-
 type BTCClient struct {
 	*rpcclient.Client
-	BTCConfig
+	config.BTCConfig
 }
 
-func NewBTCClient(runCfg benchcfg.Config) (*BTCClient, error) {
+func NewBTCClient(runCfg config.Config) (*BTCClient, error) {
 	client := &BTCClient{
-		BTCConfig: BTCConfig{
-			RPCAddr:  runCfg.BTCRPC,
+		Client: &rpcclient.Client{},
+		BTCConfig: config.BTCConfig{
+			Endpoint: runCfg.BTCRPC,
 			Username: runCfg.BTCUser,
 			Password: runCfg.BTCPass,
 		},
@@ -35,9 +27,9 @@ func NewBTCClient(runCfg benchcfg.Config) (*BTCClient, error) {
 	return client, nil
 }
 
-func (c *BTCClient) Start(runCfg benchcfg.Config) error {
+func (c *BTCClient) Start(runCfg config.Config) error {
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:                 rpcHostURL(c.RPCAddr, c.WalletName),
+		Host:                 rpcHostURL(c.Endpoint, c.WalletName),
 		User:                 c.Username,
 		Pass:                 c.Password,
 		DisableTLS:           true,
@@ -50,6 +42,7 @@ func (c *BTCClient) Start(runCfg benchcfg.Config) error {
 	}
 
 	c.Client = rpcClient
+	c.WalletName = "test"
 
 	if err := c.CreateWallet(c.WalletName); err != nil {
 		return fmt.Errorf("failed to create/load wallet: %w", err)
@@ -115,9 +108,8 @@ func (c *BTCClient) importKey(path string) error {
 		return fmt.Errorf("failed to import private key: %w", err)
 	}
 
-	c.PrivKey = keys.BitcoinKey.PrivKey
-	c.BtcAddress = keys.BitcoinKey.Address
-	c.WalletName = "test"
+	c.PrivateKey = keys.BitcoinKey.PrivKey
+	c.Address = keys.BitcoinKey.Address
 
 	return nil
 }

@@ -23,6 +23,8 @@ type BTCConfig struct {
 	ZmqSeqEndpoint    string                `mapstructure:"zmq-seq-endpoint"`
 	ZmqBlockEndpoint  string                `mapstructure:"zmq-block-endpoint"`
 	ZmqTxEndpoint     string                `mapstructure:"zmq-tx-endpoint"`
+	PrivateKey        string
+	Address           string
 }
 
 const (
