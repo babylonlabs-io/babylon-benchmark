@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -192,4 +193,22 @@ func senders(stakers []*BTCStaker) []*SenderWithBabylonClient {
 		sends = append(sends, stakerCp.client)
 	}
 	return sends
+}
+
+func (c *Client) importKeys(path string) error {
+	keys, err := LoadKeys(path)
+	if err != nil {
+		return err
+	}
+
+	err = c.provider.Keybase.ImportPrivKeyHex(
+		keys.BabylonKey.KeyName,
+		hex.EncodeToString([]byte(keys.BabylonKey.PrivKey)),
+		"secp256k1",
+	)
+	if err != nil {
+		return fmt.Errorf("error importing private key %w", err)
+	}
+
+	return nil
 }
