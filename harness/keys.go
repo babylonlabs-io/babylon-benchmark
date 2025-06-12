@@ -16,7 +16,6 @@ type Key struct {
 	PubKey  string `json:"pubkey"`
 	PrivKey string `json:"privkey"`
 	Address string `json:"address"`
-	KeyName string `json:"key_name"`
 }
 
 type KeyExport struct {
