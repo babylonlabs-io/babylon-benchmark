@@ -36,7 +36,7 @@ func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 }
 
 func (c *BTCClient) Setup(cfg config.Config) error {
-	c.config = c.ConvertToBTCConfig(cfg)
+	c.ConvertToBTCConfig(cfg)
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
 		Host:         rpcHostURL(c.config.Endpoint, c.config.WalletName),
 		User:         c.config.Username,

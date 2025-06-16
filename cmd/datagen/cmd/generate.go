@@ -22,10 +22,12 @@ const (
 	grpcaddr             = "grpc-address"
 	babylonGRPCaddr      = "babylon-grpc-address"
 	babylonRPCaddr       = "babylon-rpc-address"
-	btcRPCaddr           = "btc-rpc-addr"
+	btcRPCaddr           = "btc-rpc-address"
 	btcpass              = "btc-pass"
 	btcuser              = "btc-user"
 	keys                 = "keys"
+	walletName           = "wallet-name"
+	walletPassphrase     = "wallet-passphrase"
 )
 
 // CommandGenerate generates data
@@ -73,10 +75,10 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 
 func CommandGenerateRemote() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "generate remote",
+		Use:     "generate-remote",
 		Aliases: []string{"gr"},
 		Short:   "Generates delegations with remote babylon and bitcoin nodes",
-		Example: `dgd generate-remote --babylon-rpc-addr http://localhost:26657 --babylon-grpc-addr http://localhost:9090 --btc-rpc-addr http://localhost:8332 --keys /path/to/keys --btc-user "username" --btc-pass "btcpassword"`,
+		Example: `dgd generate-remote --babylon-rpc-address http://localhost:26657 --babylon-grpc-address http://localhost:9090 --btc-rpc-address http://localhost:8332 --keys /path/to/keys --btc-user "username" --btc-pass "btcpassword"`,
 		Args:    cobra.NoArgs,
 		RunE:    cmdGenerateRemote,
 	}
@@ -104,6 +106,16 @@ func CommandGenerateRemote() *cobra.Command {
 
 	f.String(babylonRPCaddr, "", "Babylon RPC address")
 	if err := cmd.MarkFlagRequired(babylonRPCaddr); err != nil {
+		panic(err)
+	}
+
+	f.String(walletName, "", "Wallet name")
+	if err := cmd.MarkFlagRequired(walletName); err != nil {
+		panic(err)
+	}
+
+	f.String(walletPassphrase, "", "Wallet passphrase")
+	if err := cmd.MarkFlagRequired(walletPassphrase); err != nil {
 		panic(err)
 	}
 
@@ -147,19 +159,31 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", keys)
 	}
 
+	walletName, err := flags.GetString(walletName)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", walletName)
+	}
+
+	walletPassphrase, err := flags.GetString(walletPassphrase)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", walletPassphrase)
+	}
+
 	cfg := config.Config{
-		BabylonRPC:  babylonRPCaddr,
-		BabylonGRPC: babylonGRPCaddr,
-		BTCPass:     btcpass,
-		BTCUser:     btcuser,
-		Keys:        keys,
+		BabylonRPC:       babylonRPCaddr,
+		BabylonGRPC:      babylonGRPCaddr,
+		BTCPass:          btcpass,
+		BTCUser:          btcuser,
+		Keys:             keys,
+		WalletName:       walletName,
+		WalletPassphrase: walletPassphrase,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {
 		return err
 	}
 
-	// harness.RunRemote(cmd.Context(), cfg)
+	harness.RunRemote(cmd.Context(), cfg)
 
 	return nil
 }
