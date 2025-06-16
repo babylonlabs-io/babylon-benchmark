@@ -3,9 +3,10 @@ package harness
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"slices"
 )
 
 type BTCHeaderGenerator struct {
@@ -23,7 +24,7 @@ func NewBTCHeaderGenerator(
 }
 
 func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
-	btcHeight, err := s.tm.TestRpcClient.GetBlockCount()
+	btcHeight, err := s.tm.TestRpcClient.client.GetBlockCount()
 	if err != nil {
 		return err
 	}
@@ -36,11 +37,11 @@ func (s *BTCHeaderGenerator) CatchUpBTCLightClient(ctx context.Context) error {
 
 	headers := make([]*wire.BlockHeader, 0, btcHeight)
 	for i := int(btclcHeight + 1); i <= int(btcHeight); i++ {
-		hash, err := s.tm.TestRpcClient.GetBlockHash(int64(i))
+		hash, err := s.tm.TestRpcClient.client.GetBlockHash(int64(i))
 		if err != nil {
 			return err
 		}
-		header, err := s.tm.TestRpcClient.GetBlockHeader(hash)
+		header, err := s.tm.TestRpcClient.client.GetBlockHeader(hash)
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	block, err := g.tm.TestRpcClient.GetBlock(hash)
+	block, err := g.tm.TestRpcClient.client.GetBlock(hash)
 	if err != nil {
 		return err
 	}
@@ -94,7 +95,7 @@ func (g *BTCHeaderGenerator) genBlocks(ctx context.Context) error {
 		return err
 	}
 
-	btcHeight, err := g.tm.TestRpcClient.GetBlockCount()
+	btcHeight, err := g.tm.TestRpcClient.client.GetBlockCount()
 	if err != nil {
 		return err
 	}

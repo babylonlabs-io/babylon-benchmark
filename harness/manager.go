@@ -23,7 +23,6 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -57,20 +56,8 @@ func DefaultConfig() *Config {
 	}
 }
 
-func defaultConfig() *Config {
-	cfg := DefaultConfig()
-	cfg.BTC.NetParams = regtestParams.Name
-	cfg.BTC.Endpoint = "127.0.0.1:18443"
-	cfg.BTC.WalletPassword = "pass"
-	cfg.BTC.Username = "user"
-	cfg.BTC.Password = "pass"
-	cfg.BTC.ZmqSeqEndpoint = benchcfg.DefaultZmqSeqEndpoint
-
-	return cfg
-}
-
 type TestManager struct {
-	TestRpcClient      *rpcclient.Client
+	TestRpcClient      *BTCClient
 	BitcoindHandler    *BitcoindTestHandler
 	BabylonClientNode0 *bbnclient.Client
 	BabylonClientNode1 *bbnclient.Client
@@ -91,6 +78,15 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		return nil, err
 	}
 
+	cfg := defaultConfig()
+
+	btcClient, err := NewBTCClient(cfg.BTC)
+	if err != nil {
+		return nil, err
+	}
+
+	btcClient.Setup(runCfg)
+
 	btcHandler := NewBitcoindHandler(manager)
 	bitcoind, err := btcHandler.Start(ctx)
 	if err != nil {
@@ -100,24 +96,9 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	passphrase := "pass"
 	_ = btcHandler.CreateWallet(ctx, "default", passphrase)
 
-	cfg := defaultConfig()
-
 	cfg.BTC.Endpoint = fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
 
-	testRpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:                 cfg.BTC.Endpoint,
-		User:                 cfg.BTC.Username,
-		Pass:                 cfg.BTC.Password,
-		DisableTLS:           true,
-		DisableConnectOnNew:  true,
-		DisableAutoReconnect: false,
-		HTTPPostMode:         true,
-	}, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = testRpcClient.WalletPassphrase(passphrase, 600); err != nil {
+	if err = btcClient.client.WalletPassphrase("pass", 600); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +203,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
 
 	return &TestManager{
-		TestRpcClient:      testRpcClient,
+		TestRpcClient:      btcClient,
 		BabylonClientNode0: babylonClientNode0,
 		BabylonClientNode1: babylonClientNode1,
 		BitcoindHandler:    btcHandler,
@@ -318,7 +299,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	feeRate := float64(0.00002)
 	pos := 1
 
-	err := tm.TestRpcClient.WalletPassphrase("pass", 60)
+	err := tm.TestRpcClient.client.WalletPassphrase("pass", 60)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -327,7 +308,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	tx.AddTxOut(stakingOutput)
 
 	lock := true
-	rawTxResult, err := tm.TestRpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
+	rawTxResult, err := tm.TestRpcClient.client.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
 		FeeRate:        &feeRate,
 		ChangePosition: &pos,
 		LockUnspents:   &lock,
@@ -336,7 +317,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, err
 	}
 
-	signed, all, err := tm.TestRpcClient.SignRawTransactionWithWallet(rawTxResult.Transaction)
+	signed, all, err := tm.TestRpcClient.client.SignRawTransactionWithWallet(rawTxResult.Transaction)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -344,7 +325,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, fmt.Errorf("all inputs need to be signed %s", rawTxResult.Transaction.TxID())
 	}
 
-	txHash, err := tm.TestRpcClient.SendRawTransaction(signed, true)
+	txHash, err := tm.TestRpcClient.client.SendRawTransaction(signed, true)
 	if err != nil {
 		return nil, nil, err
 	}
