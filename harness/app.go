@@ -11,6 +11,7 @@ import (
 	bncfg "github.com/babylonlabs-io/babylon/client/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -27,76 +28,126 @@ func RunRemote(ctx context.Context, cfg config.Config) error {
 }
 
 func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
+	fmt.Println("🚀 Starting remote harness...")
+	fmt.Printf("📁 Key path from config: %q\n", cfg.BabylonPath)
+
 	btcClient, err := NewBTCClient(defaultConfig().BTC)
 	if err != nil {
 		return fmt.Errorf("error creating btc client: %w", err)
 	}
+	fmt.Println("✅ BTC client created")
 
 	bbncfg := bncfg.DefaultBabylonConfig()
 	bbncfg.RPCAddr = cfg.BabylonRPC
 	bbncfg.GRPCAddr = cfg.BabylonGRPC
+	fmt.Printf("📡 Connecting to Babylon at RPC: %s, GRPC: %s\n", cfg.BabylonRPC, cfg.BabylonGRPC)
+
 	bbnClient, err := New(&bbncfg)
 	if err != nil {
 		return fmt.Errorf("error creating babylon client: %w", err)
 	}
+	fmt.Println("✅ Babylon client created")
 
-	err = bbnClient.importKeys(cfg.BabylonPath)
+	fmt.Println("🔑 Importing keys...")
+	fmt.Printf("  Reading keys from path: %s\n", cfg.BabylonPath)
+	err = bbnClient.importKeys(cfg.KeysPath)
 	if err != nil {
+		fmt.Printf("❌ Failed to import keys: %v\n", err)
 		return fmt.Errorf("error importing keys: %w", err)
 	}
+	fmt.Println("✅ Keys imported successfully")
 
+	fmt.Println("⚙️ Setting up BTC client...")
 	if err := btcClient.Setup(cfg); err != nil {
 		return fmt.Errorf("error starting btc client: %w", err)
 	}
+	fmt.Println("✅ BTC client setup complete")
 
-	defer btcClient.Stop()
-	if err := bbnClient.Stop(); err != nil {
-		return fmt.Errorf("failed to stop btc client: %w", err)
-	}
-
+	fmt.Println("🚀 Starting Babylon client...")
 	err = bbnClient.Start()
 	if err != nil {
+		fmt.Printf("❌ Failed to start Babylon client: %v\n", err)
 		return fmt.Errorf("error starting the babylon client: %w", err)
 	}
+	fmt.Println("✅ Babylon client started successfully")
 
-	defer bbnClient.Stop()
-
-	if err := bbnClient.Stop(); err != nil {
-		return fmt.Errorf("failed to stop babylon client: %w", err)
-	}
-
+	fmt.Printf("👥 Creating %d stakers...\n", cfg.TotalStakers)
+	var stakers []*BTCStaker
 	for i := 0; i < cfg.TotalStakers; i++ {
+		fmt.Printf("  Creating staker %d/%d...\n", i+1, cfg.TotalStakers)
 		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.BabylonGRPC)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create staker sender: %w", err)
 		}
+		fmt.Printf("  ✅ Staker sender created for staker %d\n", i+1)
 
+		fmt.Printf("  Getting activated height for staker %d...\n", i+1)
 		height, err := bbnClient.QueryClient.ActivatedHeight()
 		if err != nil {
 			return fmt.Errorf("could not get activated height %v", err)
 		}
+		fmt.Printf("  ✅ Got activated height: %d\n", height.Height)
+
+		fmt.Printf("  Getting finality providers for staker %d...\n", i+1)
 		fps, err := bbnClient.QueryClient.ActiveFinalityProvidersAtHeight(height.Height, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get finality providers: %w", err)
 		}
 
 		if len(fps.FinalityProviders) == 0 {
 			return fmt.Errorf("no active finality providers found at height %d", height.Height)
 		}
+		fmt.Printf("  ✅ Found %d finality providers\n", len(fps.FinalityProviders))
 
 		fpPks := make([]*btcec.PublicKey, 0, len(fps.FinalityProviders))
 		for _, fp := range fps.FinalityProviders {
 			pk, err := fp.BtcPkHex.ToBTCPK()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to convert finality provider key: %w", err)
 			}
 			fpPks = append(fpPks, pk)
 		}
 
 		staker := NewBTCStaker(btcClient, stakerSender, fpPks, nil, nil)
-		staker.Start(cmdCtx)
+		fmt.Printf("  ✅ Created BTC staker %d\n", i+1)
+		stakers = append(stakers, staker)
 	}
 
+	fmt.Println("🎯 Starting stakers in batches...")
+	go startStakersInBatches(cmdCtx, stakers)
+
+	fmt.Println("✅ Remote harness setup complete")
+
+	// Keep the program running and monitor blocks
+	go func() {
+		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
+
+		var lastHeight uint64
+		for {
+			select {
+			case <-t.C:
+				height, err := bbnClient.QueryClient.ActivatedHeight()
+				if err != nil {
+					fmt.Printf("🚫 Failed to get height: %v\n", err)
+					continue
+				}
+
+				if height.Height > lastHeight {
+					fmt.Printf("📈 New block! Height: %d (increased by %d)\n",
+						height.Height, height.Height-lastHeight)
+				} else {
+					fmt.Printf("⏳ Current height: %d (unchanged)\n", height.Height)
+				}
+				lastHeight = height.Height
+			case <-cmdCtx.Done():
+				return
+			}
+		}
+	}()
+
+	// Wait for context cancellation
+	<-cmdCtx.Done()
 	return nil
 }
 
@@ -262,4 +313,52 @@ func avgExecutionTime() float64 {
 	}
 
 	return float64(totalTime) / float64(count) / 1e9
+}
+
+func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
+	const (
+		batchSize     = 25
+		batchInterval = 2 * time.Second
+	)
+
+	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
+		len(stakers), batchSize, batchInterval)
+
+	start := time.Now()
+	var g errgroup.Group
+	for i := 0; i < len(stakers); i += batchSize {
+		end := i + batchSize
+		if end > len(stakers) {
+			end = len(stakers)
+		}
+		batch := stakers[i:end]
+
+		g.Go(func() error {
+			return startBatch(ctx, batch)
+		})
+
+		// Wait before starting the next batch, unless it's the last batch
+		if end < len(stakers) {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(batchInterval):
+			}
+		}
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
+
+	return g.Wait()
+}
+
+func startBatch(ctx context.Context, batch []*BTCStaker) error {
+	var g errgroup.Group
+	for _, staker := range batch {
+		g.Go(func() error {
+			return staker.Start(ctx)
+		})
+	}
+	return g.Wait()
 }

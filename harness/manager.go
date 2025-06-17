@@ -28,7 +28,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -440,50 +439,50 @@ func (tm *TestManager) fundForever(ctx context.Context) {
 	}
 }
 
-func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
-	const (
-		batchSize     = 25
-		batchInterval = 2 * time.Second
-	)
+// func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
+// 	const (
+// 		batchSize     = 25
+// 		batchInterval = 2 * time.Second
+// 	)
 
-	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
-		len(stakers), batchSize, batchInterval)
+// 	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
+// 		len(stakers), batchSize, batchInterval)
 
-	start := time.Now()
-	var g errgroup.Group
-	for i := 0; i < len(stakers); i += batchSize {
-		end := i + batchSize
-		if end > len(stakers) {
-			end = len(stakers)
-		}
-		batch := stakers[i:end]
+// 	start := time.Now()
+// 	var g errgroup.Group
+// 	for i := 0; i < len(stakers); i += batchSize {
+// 		end := i + batchSize
+// 		if end > len(stakers) {
+// 			end = len(stakers)
+// 		}
+// 		batch := stakers[i:end]
 
-		g.Go(func() error {
-			return startBatch(ctx, batch)
-		})
+// 		g.Go(func() error {
+// 			return startBatch(ctx, batch)
+// 		})
 
-		// Wait before starting the next batch, unless it's the last batch
-		if end < len(stakers) {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(batchInterval):
-			}
-		}
-	}
+// 		// Wait before starting the next batch, unless it's the last batch
+// 		if end < len(stakers) {
+// 			select {
+// 			case <-ctx.Done():
+// 				return ctx.Err()
+// 			case <-time.After(batchInterval):
+// 			}
+// 		}
+// 	}
 
-	elapsed := time.Since(start)
-	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
+// 	elapsed := time.Since(start)
+// 	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
 
-	return g.Wait()
-}
+// 	return g.Wait()
+// }
 
-func startBatch(ctx context.Context, batch []*BTCStaker) error {
-	var g errgroup.Group
-	for _, staker := range batch {
-		g.Go(func() error {
-			return staker.Start(ctx)
-		})
-	}
-	return g.Wait()
-}
+// func startBatch(ctx context.Context, batch []*BTCStaker) error {
+// 	var g errgroup.Group
+// 	for _, staker := range batch {
+// 		g.Go(func() error {
+// 			return staker.Start(ctx)
+// 		})
+// 	}
+// 	return g.Wait()
+// }

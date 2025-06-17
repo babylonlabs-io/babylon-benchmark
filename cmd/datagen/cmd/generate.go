@@ -28,6 +28,7 @@ const (
 	keys                 = "keys"
 	walletName           = "wallet-name"
 	walletPassphrase     = "wallet-passphrase"
+	keysPath             = "keys-path"
 )
 
 // CommandGenerate generates data
@@ -119,10 +120,12 @@ func CommandGenerateRemote() *cobra.Command {
 		panic(err)
 	}
 
-	f.String(keys, "", "Path to btc and babylon key pairs that will be used for remote node funding")
-	if err := cmd.MarkFlagRequired(keys); err != nil {
+	f.String(keysPath, "", "Path to btc and babylon key pairs that will be used for remote node funding")
+	if err := cmd.MarkFlagRequired(keysPath); err != nil {
 		panic(err)
 	}
+
+	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
 
 	return cmd
 }
@@ -154,9 +157,9 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", babylonRPCaddr)
 	}
 
-	keys, err := flags.GetString(keys)
+	keysPath, err := flags.GetString(keysPath)
 	if err != nil {
-		return fmt.Errorf("failed to read flag: %s", keys)
+		return fmt.Errorf("failed to read flag: %s", keysPath)
 	}
 
 	walletName, err := flags.GetString(walletName)
@@ -169,14 +172,20 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", walletPassphrase)
 	}
 
+	totalStakers, err := flags.GetInt(totalStakersFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", totalStakersFlag)
+	}
+
 	cfg := config.Config{
 		BabylonRPC:       babylonRPCaddr,
 		BabylonGRPC:      babylonGRPCaddr,
 		BTCPass:          btcpass,
 		BTCUser:          btcuser,
-		Keys:             keys,
+		KeysPath:         keysPath,
 		WalletName:       walletName,
 		WalletPassphrase: walletPassphrase,
+		TotalStakers:     totalStakers,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {

@@ -201,6 +201,8 @@ func (c *Client) importKeys(path string) error {
 		return err
 	}
 
+	_ = c.provider.Keybase.Delete(keys.BabylonKey.KeyName)
+
 	err = c.provider.Keybase.ImportPrivKeyHex(
 		keys.BabylonKey.KeyName,
 		hex.EncodeToString([]byte(keys.BabylonKey.PrivKey)),

@@ -16,7 +16,7 @@ type Config struct {
 	BabylonGRPC            string
 	BTCPass                string
 	BTCUser                string
-	Keys                   string
+	KeysPath               string
 	WalletName             string
 	WalletPassphrase       string
 }
@@ -62,8 +62,8 @@ func (c *Config) ValidateRemote() error {
 		return fmt.Errorf("btcuser should not be empty")
 	}
 
-	if c.Keys == "" {
-		return fmt.Errorf("keys should not be empty")
+	if c.KeysPath == "" {
+		return fmt.Errorf("keys path should not be empty")
 	}
 
 	return nil

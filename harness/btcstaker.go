@@ -18,6 +18,7 @@ import (
 	btckpttypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	btcstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcjson"
@@ -596,4 +597,29 @@ func (s *BTCStaker) randomFpPK() *btcec.PublicKey {
 	randomIndex := rnd.Intn(len(s.fpPKChunk))
 
 	return s.fpPKChunk[randomIndex]
+}
+
+func (s *BTCStaker) listBlocksForever(ctx context.Context) {
+	lt := time.NewTicker(5 * time.Second)
+	defer lt.Stop()
+
+	for {
+		select {
+
+		case <-ctx.Done():
+			return
+		case <-lt.C:
+			resp, err := s.client.ListBlocks(finalitytypes.QueriedBlockStatus_NON_FINALIZED, nil)
+			if err != nil {
+				fmt.Printf("🚫 Failed to list blocks: %v\n", err)
+				continue
+			}
+
+			if len(resp.Blocks) == 0 {
+				continue
+			}
+
+			fmt.Printf("🔎 Found %d non-finalized block(s). Next block to finalize: %d\n", len(resp.Blocks), resp.Blocks[0].Height)
+		}
+	}
 }
