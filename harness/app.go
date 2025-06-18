@@ -68,7 +68,6 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
-		go staker.Start(cmdCtx)
 		if err := staker.Start(cmdCtx); err != nil {
 			return fmt.Errorf("failed to start staker: %w", err)
 		}
