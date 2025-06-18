@@ -241,7 +241,7 @@ func avgExecutionTime() float64 {
 	return float64(totalTime) / float64(count) / 1e9
 }
 
-func getFinalityProvidersPKs(client *Client) (fpPk []*btcec.PublicKey, err error) {
+func getFinalityProvidersPKs(client *Client) ([]*btcec.PublicKey, error) {
 	height, err := client.QueryClient.ActivatedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("could not get activated height %v", err)
