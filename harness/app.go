@@ -72,7 +72,9 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		stakers = append(stakers, staker)
 	}
 
-	go startStakersInBatches(cmdCtx, stakers)
+	if err := startStakersInBatches(cmdCtx, stakers); err != nil {
+		return fmt.Errorf("failed to start stakers: %w", err)
+	}
 
 	return nil
 }
