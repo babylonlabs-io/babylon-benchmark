@@ -24,13 +24,14 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type BTCStaker struct {
-	btcClient       *BTCClient
+	btcClient       *rpcclient.Client
 	client          *SenderWithBabylonClient
 	fpPK            *btcec.PublicKey
 	fpPKChunk       []*btcec.PublicKey
@@ -39,7 +40,7 @@ type BTCStaker struct {
 }
 
 func NewBTCStaker(
-	btcClient *BTCClient,
+	btcClient *rpcclient.Client,
 	client *SenderWithBabylonClient,
 	finalityProvidersPublicKey []*btcec.PublicKey,
 	fundingRequest chan sdk.AccAddress,
@@ -55,11 +56,11 @@ func NewBTCStaker(
 }
 
 func (s *BTCStaker) Start(ctx context.Context) error {
-	stakerAddress, err := s.btcClient.client.GetNewAddress("")
+	stakerAddress, err := s.btcClient.GetNewAddress("")
 	if err != nil {
 		return err
 	}
-	stakerInfo, err := s.btcClient.client.GetAddressInfo(stakerAddress.String())
+	stakerInfo, err := s.btcClient.GetAddressInfo(stakerAddress.String())
 	if err != nil {
 		return err
 	}
@@ -180,7 +181,7 @@ func (s *BTCStaker) signBip322NativeSegwit(stakerAddress btcutil.Address) (*btcs
 	toSign := bip322.GetToSignTx(toSpend)
 
 	amt := float64(0)
-	signed, all, err := s.btcClient.client.SignRawTransactionWithWallet2(toSign, []btcjson.RawTxWitnessInput{
+	signed, all, err := s.btcClient.SignRawTransactionWithWallet2(toSign, []btcjson.RawTxWitnessInput{
 		{
 			Txid:         toSpendhash.String(),
 			Vout:         0,
@@ -274,12 +275,12 @@ func (s *BTCStaker) SignOneInputTaprootSpendingTransaction(
 		return nil, fmt.Errorf("failed to encode PSBT packet: %w", err)
 	}
 
-	if err := s.btcClient.client.WalletPassphrase("pass", 600); err != nil {
+	if err := s.btcClient.WalletPassphrase("pass", 600); err != nil {
 		return nil, fmt.Errorf("failed to unlock wallet: %w", err)
 	}
 
 	sign := true
-	signResult, err := s.btcClient.client.WalletProcessPsbt(
+	signResult, err := s.btcClient.WalletProcessPsbt(
 		psbtEncoded,
 		&sign,
 		"DEFAULT",
@@ -365,7 +366,7 @@ func (s *BTCStaker) buildInclusion(
 	txHash *chainhash.Hash,
 	requiredDepth uint32,
 ) (*bstypes.InclusionProof, error) {
-	tx, err := s.btcClient.client.GetTransaction(txHash)
+	tx, err := s.btcClient.GetTransaction(txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +376,7 @@ func (s *BTCStaker) buildInclusion(
 		if err != nil {
 			return nil, err
 		}
-		block, err := s.btcClient.client.GetBlock(blockHash)
+		block, err := s.btcClient.GetBlock(blockHash)
 		if err != nil {
 			return nil, err
 		}
@@ -422,7 +423,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		return fmt.Errorf("err BuildStakingInfo: %w", err)
 	}
 
-	stakingTx, hash, err := s.btcClient.AtomicFundSignSendStakingTx(stakingInfo.StakingOutput)
+	stakingTx, hash, err := AtomicFundSignSendStakingTx(s.btcClient, stakingInfo.StakingOutput)
 	if err != nil {
 		return fmt.Errorf("err AtomicFundSignSendStakingTx: %w", err)
 	}

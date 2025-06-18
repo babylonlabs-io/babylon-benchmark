@@ -1,14 +1,9 @@
 package harness
 
 import (
-	"fmt"
-
 	"github.com/babylonlabs-io/babylon-benchmark/config"
 
-	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
-	"github.com/btcsuite/btcd/wire"
 )
 
 type BTCClient struct {
@@ -87,49 +82,4 @@ func (c *BTCClient) ConvertToBTCConfig(cfg config.Config) config.BTCConfig {
 	}
 
 	return btcCfg
-}
-
-func (c *BTCClient) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {
-	// 	1 sat/vB
-	// = 1 sat/vB × 1000 vB/kvB
-	// = 1000 sat/kvB × 1/100'000'000 ₿/sat
-	// = 103 × 10-8 ₿/kvB
-	// = 10-5 ₿/kvB
-	// = 1 / 100'000 ₿/kvB
-
-	feeRate := float64(0.00002)
-	pos := 1
-
-	err := c.client.WalletPassphrase("pass", 60)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tx := wire.NewMsgTx(2)
-	tx.AddTxOut(stakingOutput)
-
-	lock := true
-	rawTxResult, err := c.client.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
-		FeeRate:        &feeRate,
-		ChangePosition: &pos,
-		LockUnspents:   &lock,
-	}, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	signed, all, err := c.client.SignRawTransactionWithWallet(rawTxResult.Transaction)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !all {
-		return nil, nil, fmt.Errorf("all inputs need to be signed %s", rawTxResult.Transaction.TxID())
-	}
-
-	txHash, err := c.client.SendRawTransaction(signed, true)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return rawTxResult.Transaction, txHash, nil
 }

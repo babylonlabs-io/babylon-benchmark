@@ -56,7 +56,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error starting the babylon client: %w", err)
 	}
 
-	fpPks, err := findFps(bbnClient)
+	fpPks, err := getFinalityProvidersPKs(bbnClient)
 	if err != nil {
 		return fmt.Errorf("error collecting the finality providers %w", err)
 	}
@@ -68,7 +68,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 			return fmt.Errorf("failed to create staker sender: %w", err)
 		}
 
-		staker := NewBTCStaker(btcClient, stakerSender, fpPks, nil, nil)
+		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
 		stakers = append(stakers, staker)
 	}
 
@@ -239,7 +239,7 @@ func avgExecutionTime() float64 {
 	return float64(totalTime) / float64(count) / 1e9
 }
 
-func findFps(client *Client) (fpPk []*btcec.PublicKey, err error) {
+func getFinalityProvidersPKs(client *Client) (fpPk []*btcec.PublicKey, err error) {
 	height, err := client.QueryClient.ActivatedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("could not get activated height %v", err)
