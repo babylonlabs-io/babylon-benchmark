@@ -192,7 +192,9 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	harness.RunRemote(cmd.Context(), cfg)
+	if err := harness.RunRemote(cmd.Context(), cfg); err != nil {
+		return err
+	}
 
 	return nil
 }
