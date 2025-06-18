@@ -61,6 +61,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error collecting the finality providers %w", err)
 	}
 
+	var stakers []*BTCStaker
 	for i := 0; i < cfg.TotalStakers; i++ {
 		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.BabylonGRPC)
 		if err != nil {
@@ -68,10 +69,10 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
-		if err := staker.Start(cmdCtx); err != nil {
-			return fmt.Errorf("failed to start staker: %w", err)
-		}
+		stakers = append(stakers, staker)
 	}
+
+	go startStakersInBatches(cmdCtx, stakers)
 
 	return nil
 }
