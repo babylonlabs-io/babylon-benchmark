@@ -179,11 +179,11 @@ func (s *SubReporter) buildSpvProof(
 	txHash *chainhash.Hash,
 	txHash2 *chainhash.Hash,
 	requiredDepth uint32) ([]*btckpttypes.BTCSpvProof, error) {
-	tx1, err := s.tm.TestRpcClient.client.GetTransaction(txHash)
+	tx1, err := s.tm.TestRpcClient.GetTransaction(txHash)
 	if err != nil {
 		return nil, err
 	}
-	tx2, err := s.tm.TestRpcClient.client.GetTransaction(txHash2)
+	tx2, err := s.tm.TestRpcClient.GetTransaction(txHash2)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (s *SubReporter) buildSpvProof(
 		if err != nil {
 			return nil, err
 		}
-		block1, err := s.tm.TestRpcClient.client.GetBlock(blockHash)
+		block1, err := s.tm.TestRpcClient.GetBlock(blockHash)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +211,7 @@ func (s *SubReporter) buildSpvProof(
 		if err != nil {
 			return nil, err
 		}
-		block2, err := s.tm.TestRpcClient.client.GetBlock(blockHash2)
+		block2, err := s.tm.TestRpcClient.GetBlock(blockHash2)
 		if err != nil {
 			return nil, err
 		}

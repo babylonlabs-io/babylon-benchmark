@@ -23,11 +23,13 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -56,7 +58,7 @@ func DefaultConfig() *Config {
 }
 
 type TestManager struct {
-	TestRpcClient      *BTCClient
+	TestRpcClient      *rpcclient.Client
 	BitcoindHandler    *BitcoindTestHandler
 	BabylonClientNode0 *bbnclient.Client
 	BabylonClientNode1 *bbnclient.Client
@@ -79,13 +81,6 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 
 	cfg := defaultConfig()
 
-	btcClient, err := NewBTCClient(cfg.BTC)
-	if err != nil {
-		return nil, err
-	}
-
-	btcClient.Setup(runCfg)
-
 	btcHandler := NewBitcoindHandler(manager)
 	bitcoind, err := btcHandler.Start(ctx)
 	if err != nil {
@@ -97,7 +92,20 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 
 	cfg.BTC.Endpoint = fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
 
-	if err = btcClient.client.WalletPassphrase("pass", 600); err != nil {
+	testRpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
+		Host:                 cfg.BTC.Endpoint,
+		User:                 cfg.BTC.Username,
+		Pass:                 cfg.BTC.Password,
+		DisableTLS:           true,
+		DisableConnectOnNew:  true,
+		DisableAutoReconnect: false,
+		HTTPPostMode:         true,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = testRpcClient.WalletPassphrase(passphrase, 600); err != nil {
 		return nil, err
 	}
 
@@ -202,7 +210,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 	fundingAddress := sdk.MustAccAddressFromBech32(fundingAccount)
 
 	return &TestManager{
-		TestRpcClient:      btcClient,
+		TestRpcClient:      testRpcClient,
 		BabylonClientNode0: babylonClientNode0,
 		BabylonClientNode1: babylonClientNode1,
 		BitcoindHandler:    btcHandler,
@@ -298,7 +306,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	feeRate := float64(0.00002)
 	pos := 1
 
-	err := tm.TestRpcClient.client.WalletPassphrase("pass", 60)
+	err := tm.TestRpcClient.WalletPassphrase("pass", 60)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -307,7 +315,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	tx.AddTxOut(stakingOutput)
 
 	lock := true
-	rawTxResult, err := tm.TestRpcClient.client.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
+	rawTxResult, err := tm.TestRpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
 		FeeRate:        &feeRate,
 		ChangePosition: &pos,
 		LockUnspents:   &lock,
@@ -316,7 +324,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, err
 	}
 
-	signed, all, err := tm.TestRpcClient.client.SignRawTransactionWithWallet(rawTxResult.Transaction)
+	signed, all, err := tm.TestRpcClient.SignRawTransactionWithWallet(rawTxResult.Transaction)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -324,7 +332,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, fmt.Errorf("all inputs need to be signed %s", rawTxResult.Transaction.TxID())
 	}
 
-	txHash, err := tm.TestRpcClient.client.SendRawTransaction(signed, true)
+	txHash, err := tm.TestRpcClient.SendRawTransaction(signed, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -439,50 +447,50 @@ func (tm *TestManager) fundForever(ctx context.Context) {
 	}
 }
 
-// func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
-// 	const (
-// 		batchSize     = 25
-// 		batchInterval = 2 * time.Second
-// 	)
+func startStakersInBatches(ctx context.Context, stakers []*BTCStaker) error {
+	const (
+		batchSize     = 25
+		batchInterval = 2 * time.Second
+	)
 
-// 	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
-// 		len(stakers), batchSize, batchInterval)
+	fmt.Printf("⌛ Starting %d stakers in batches of %d, with %s interval\n",
+		len(stakers), batchSize, batchInterval)
 
-// 	start := time.Now()
-// 	var g errgroup.Group
-// 	for i := 0; i < len(stakers); i += batchSize {
-// 		end := i + batchSize
-// 		if end > len(stakers) {
-// 			end = len(stakers)
-// 		}
-// 		batch := stakers[i:end]
+	start := time.Now()
+	var g errgroup.Group
+	for i := 0; i < len(stakers); i += batchSize {
+		end := i + batchSize
+		if end > len(stakers) {
+			end = len(stakers)
+		}
+		batch := stakers[i:end]
 
-// 		g.Go(func() error {
-// 			return startBatch(ctx, batch)
-// 		})
+		g.Go(func() error {
+			return startBatch(ctx, batch)
+		})
 
-// 		// Wait before starting the next batch, unless it's the last batch
-// 		if end < len(stakers) {
-// 			select {
-// 			case <-ctx.Done():
-// 				return ctx.Err()
-// 			case <-time.After(batchInterval):
-// 			}
-// 		}
-// 	}
+		// Wait before starting the next batch, unless it's the last batch
+		if end < len(stakers) {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(batchInterval):
+			}
+		}
+	}
 
-// 	elapsed := time.Since(start)
-// 	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
+	elapsed := time.Since(start)
+	fmt.Printf("✅ All %d stakers started in %s\n", len(stakers), elapsed)
 
-// 	return g.Wait()
-// }
+	return g.Wait()
+}
 
-// func startBatch(ctx context.Context, batch []*BTCStaker) error {
-// 	var g errgroup.Group
-// 	for _, staker := range batch {
-// 		g.Go(func() error {
-// 			return staker.Start(ctx)
-// 		})
-// 	}
-// 	return g.Wait()
-// }
+func startBatch(ctx context.Context, batch []*BTCStaker) error {
+	var g errgroup.Group
+	for _, staker := range batch {
+		g.Go(func() error {
+			return staker.Start(ctx)
+		})
+	}
+	return g.Wait()
+}
