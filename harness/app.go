@@ -3,11 +3,14 @@ package harness
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/babylon-benchmark/config"
-	"github.com/babylonlabs-io/babylon-benchmark/container"
-	"go.uber.org/zap"
 	"sync/atomic"
 	"time"
+
+	"github.com/babylonlabs-io/babylon-benchmark/config"
+	"github.com/babylonlabs-io/babylon-benchmark/container"
+	bncfg "github.com/babylonlabs-io/babylon/client/config"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"go.uber.org/zap"
 )
 
 var (
@@ -17,6 +20,63 @@ var (
 
 func Run(ctx context.Context, cfg config.Config) error {
 	return startHarness(ctx, cfg)
+}
+
+func RunRemote(ctx context.Context, cfg config.Config) error {
+	return startRemoteHarness(ctx, cfg)
+}
+
+func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
+	btcClient, err := NewBTCClient(defaultConfig().BTC)
+	if err != nil {
+		return fmt.Errorf("error creating btc client: %w", err)
+	}
+
+	bbncfg := bncfg.DefaultBabylonConfig()
+	bbncfg.RPCAddr = cfg.BabylonRPC
+	bbncfg.GRPCAddr = cfg.BabylonGRPC
+	fmt.Printf("📡 Connecting to Babylon at RPC: %s, GRPC: %s\n", cfg.BabylonRPC, cfg.BabylonGRPC)
+
+	bbnClient, err := New(&bbncfg)
+	if err != nil {
+		return fmt.Errorf("error creating babylon client: %w", err)
+	}
+
+	err = bbnClient.importKeys(cfg.KeysPath)
+	if err != nil {
+		return fmt.Errorf("error importing keys: %w", err)
+	}
+
+	if err := btcClient.Setup(cfg); err != nil {
+		return fmt.Errorf("error starting btc client: %w", err)
+	}
+
+	err = bbnClient.Start()
+	if err != nil {
+		return fmt.Errorf("error starting the babylon client: %w", err)
+	}
+
+	fpPks, err := getFinalityProvidersPKs(bbnClient)
+	if err != nil {
+		return fmt.Errorf("error collecting the finality providers %w", err)
+	}
+
+	var stakers []*BTCStaker
+	for i := 0; i < cfg.TotalStakers; i++ {
+		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.BabylonGRPC)
+		if err != nil {
+			return fmt.Errorf("failed to create staker sender: %w", err)
+		}
+
+		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
+		stakers = append(stakers, staker)
+	}
+
+	if err := startStakersInBatches(cmdCtx, stakers); err != nil {
+		return fmt.Errorf("failed to start stakers: %w", err)
+	}
+
+	return nil
 }
 
 func startHarness(cmdCtx context.Context, cfg config.Config) error {
@@ -89,8 +149,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		rndFpChunk := fpMgr.getRandomChunk(3)
-
-		stakers = append(stakers, NewBTCStaker(tm, stakerSender, rndFpChunk, tm.fundingRequests, tm.fundingResponse))
+		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, tm.fundingRequests, tm.fundingResponse))
 	}
 
 	// periodically check if we need to fund the staker
@@ -181,4 +240,31 @@ func avgExecutionTime() float64 {
 	}
 
 	return float64(totalTime) / float64(count) / 1e9
+}
+
+func getFinalityProvidersPKs(client *Client) ([]*btcec.PublicKey, error) {
+	height, err := client.QueryClient.ActivatedHeight()
+	if err != nil {
+		return nil, fmt.Errorf("could not get activated height %v", err)
+	}
+
+	fps, err := client.QueryClient.ActiveFinalityProvidersAtHeight(height.Height, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get finality providers: %w", err)
+	}
+
+	if len(fps.FinalityProviders) == 0 {
+		return nil, fmt.Errorf("no active finality providers found at height %d", height.Height)
+	}
+
+	fpPks := make([]*btcec.PublicKey, 0, len(fps.FinalityProviders))
+	for _, fp := range fps.FinalityProviders {
+		pk, err := fp.BtcPkHex.ToBTCPK()
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert finality provider key: %w", err)
+		}
+		fpPks = append(fpPks, pk)
+	}
+
+	return fpPks, nil
 }

@@ -3,9 +3,10 @@ package harness
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"slices"
 )
 
 type BTCHeaderGenerator struct {

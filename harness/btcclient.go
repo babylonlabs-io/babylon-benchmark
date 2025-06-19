@@ -11,6 +11,18 @@ type BTCClient struct {
 	config config.BTCConfig
 }
 
+func defaultConfig() *Config {
+	cfg := DefaultConfig()
+	cfg.BTC.NetParams = regtestParams.Name
+	cfg.BTC.Endpoint = "127.0.0.1:18443"
+	cfg.BTC.WalletPassword = "pass"
+	cfg.BTC.Username = "user"
+	cfg.BTC.Password = "pass"
+	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
+
+	return cfg
+}
+
 func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 	client := &BTCClient{
 		config: cfg,
@@ -19,7 +31,7 @@ func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 }
 
 func (c *BTCClient) Setup(cfg config.Config) error {
-	c.convertToBTCConfig(cfg)
+	c.ConvertToBTCConfig(cfg)
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
 		Host:         rpcHostURL(c.config.Endpoint, c.config.WalletName),
 		User:         c.config.Username,
@@ -50,12 +62,24 @@ func (c *BTCClient) Stop() {
 	}
 }
 
-func (c *BTCClient) convertToBTCConfig(cfg config.Config) config.BTCConfig {
-	return config.BTCConfig{
-		Endpoint:       cfg.BTCRPC,
-		WalletName:     cfg.WalletName,
-		WalletPassword: cfg.WalletPassphrase,
-		Username:       cfg.BTCUser,
-		Password:       cfg.BTCPass,
+func (c *BTCClient) ConvertToBTCConfig(cfg config.Config) config.BTCConfig {
+	btcCfg := config.BTCConfig{}
+
+	if cfg.BTCRPC != "" {
+		btcCfg.Endpoint = cfg.BTCRPC
 	}
+	if cfg.WalletName != "" {
+		btcCfg.WalletName = cfg.WalletName
+	}
+	if cfg.WalletPassphrase != "" {
+		btcCfg.WalletPassword = cfg.WalletPassphrase
+	}
+	if cfg.BTCUser != "" {
+		btcCfg.Username = cfg.BTCUser
+	}
+	if cfg.BTCPass != "" {
+		btcCfg.Password = cfg.BTCPass
+	}
+
+	return btcCfg
 }

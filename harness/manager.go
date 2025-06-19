@@ -57,18 +57,6 @@ func DefaultConfig() *Config {
 	}
 }
 
-func defaultConfig() *Config {
-	cfg := DefaultConfig()
-	cfg.BTC.NetParams = regtestParams.Name
-	cfg.BTC.Endpoint = "127.0.0.1:18443"
-	cfg.BTC.WalletPassword = "pass"
-	cfg.BTC.Username = "user"
-	cfg.BTC.Password = "pass"
-	cfg.BTC.ZmqSeqEndpoint = benchcfg.DefaultZmqSeqEndpoint
-
-	return cfg
-}
-
 type TestManager struct {
 	TestRpcClient      *rpcclient.Client
 	BitcoindHandler    *BitcoindTestHandler
@@ -91,6 +79,8 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		return nil, err
 	}
 
+	cfg := defaultConfig()
+
 	btcHandler := NewBitcoindHandler(manager)
 	bitcoind, err := btcHandler.Start(ctx)
 	if err != nil {
@@ -99,8 +89,6 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 
 	passphrase := "pass"
 	_ = btcHandler.CreateWallet(ctx, "default", passphrase)
-
-	cfg := defaultConfig()
 
 	cfg.BTC.Endpoint = fmt.Sprintf("127.0.0.1:%s", bitcoind.GetPort("18443/tcp"))
 
@@ -307,7 +295,7 @@ func cleanupDir(path string) {
 	_ = os.RemoveAll(path)
 }
 
-func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {
+func AtomicFundSignSendStakingTx(rpcClient *rpcclient.Client, stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {
 	// 	1 sat/vB
 	// = 1 sat/vB × 1000 vB/kvB
 	// = 1000 sat/kvB × 1/100'000'000 ₿/sat
@@ -318,7 +306,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	feeRate := float64(0.00002)
 	pos := 1
 
-	err := tm.TestRpcClient.WalletPassphrase("pass", 60)
+	err := rpcClient.WalletPassphrase("pass", 60)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -327,7 +315,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 	tx.AddTxOut(stakingOutput)
 
 	lock := true
-	rawTxResult, err := tm.TestRpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
+	rawTxResult, err := rpcClient.FundRawTransaction(tx, btcjson.FundRawTransactionOpts{
 		FeeRate:        &feeRate,
 		ChangePosition: &pos,
 		LockUnspents:   &lock,
@@ -336,7 +324,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, err
 	}
 
-	signed, all, err := tm.TestRpcClient.SignRawTransactionWithWallet(rawTxResult.Transaction)
+	signed, all, err := rpcClient.SignRawTransactionWithWallet(rawTxResult.Transaction)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -344,7 +332,7 @@ func (tm *TestManager) AtomicFundSignSendStakingTx(stakingOutput *wire.TxOut) (*
 		return nil, nil, fmt.Errorf("all inputs need to be signed %s", rawTxResult.Transaction.TxID())
 	}
 
-	txHash, err := tm.TestRpcClient.SendRawTransaction(signed, true)
+	txHash, err := rpcClient.SendRawTransaction(signed, true)
 	if err != nil {
 		return nil, nil, err
 	}
