@@ -149,7 +149,6 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		rndFpChunk := fpMgr.getRandomChunk(3)
-		// TODO: fix this tm.TestRpcClient
 		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, tm.fundingRequests, tm.fundingResponse))
 	}
 
