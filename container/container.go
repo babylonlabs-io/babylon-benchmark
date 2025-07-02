@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/babylon-benchmark/lib"
-	"github.com/docker/docker/api/types"
 	"regexp"
 	"strconv"
 	"time"
 
-	bbn "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon-benchmark/lib"
+	"github.com/docker/docker/api/types"
+
+	bbn "github.com/babylonlabs-io/babylon/v3/types"
 	rawDc "github.com/docker/docker/client"
 
 	"github.com/btcsuite/btcd/btcec/v2"

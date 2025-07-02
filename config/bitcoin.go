@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 )
 

@@ -1,8 +1,8 @@
 package harness
 
 import (
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
 	"github.com/btcsuite/btcd/wire"
 )
 
