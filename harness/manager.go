@@ -3,16 +3,21 @@ package harness
 import (
 	"bytes"
 	"context"
-	"cosmossdk.io/errors"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"time"
+
+	"cosmossdk.io/errors"
 	benchcfg "github.com/babylonlabs-io/babylon-benchmark/config"
 	"github.com/babylonlabs-io/babylon-benchmark/container"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	bbncfg "github.com/babylonlabs-io/babylon/client/config"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	bbncfg "github.com/babylonlabs-io/babylon/v3/client/config"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
@@ -25,10 +30,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"golang.org/x/sync/errgroup"
-	"os"
-	"path/filepath"
-	"slices"
-	"time"
 )
 
 var (
