@@ -230,7 +230,7 @@ func (m *Manager) RunBabylondResource(
 				"sed -i -e 's/iavl-cache-size = 0/iavl-cache-size = %d/' /home/node0/babylond/config/app.toml && "+
 				"sed -i -e 's/iavl-disable-fastnode = true/iavl-disable-fastnode = %s/' /home/node0/babylond/config/app.toml && "+
 				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node0/babylond/config/config.toml &&`+
-				"babylond start --home=/home/node0/babylond --rpc.pprof_laddr=0.0.0.0:6060",
+				"export BABYLON_BLS_PASSWORD=password && babylond start --home=/home/node0/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 			epochInterval, slashingPkScript, baseHeaderHex,
 			bbn.NewBIP340PubKeyFromBTCPK(CovenantPubKey).MarshalHex(),
 			iavlCacheSize,
@@ -288,7 +288,7 @@ func (m *Manager) RunBabylondResource(
 				"sed -i -e 's/iavl-cache-size = 0/iavl-cache-size = %d/' /home/node1/babylond/config/app.toml && "+
 				"sed -i -e 's/iavl-disable-fastnode = true/iavl-disable-fastnode = %s/' /home/node1/babylond/config/app.toml && "+
 				`sed -i -e 's/timeout_commit = "5s"/timeout_commit = "2s"/' /home/node1/babylond/config/config.toml &&`+
-				"babylond start --home=/home/node1/babylond --rpc.pprof_laddr=0.0.0.0:6060",
+				"export BABYLON_BLS_PASSWORD=password && babylond start --home=/home/node1/babylond --rpc.pprof_laddr=0.0.0.0:6060",
 			iavlCacheSize,
 			fmt.Sprintf("%t", iavlDisableFastnode),
 		),
