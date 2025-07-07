@@ -52,7 +52,7 @@ func getEncodingConfig() *params.EncodingConfig {
 type Client struct {
 	*query.QueryClient
 	provider *babylonclient.CosmosProvider
-	Bank     banktypes.QueryClient
+	bank     banktypes.QueryClient
 }
 
 func New(
@@ -232,7 +232,7 @@ func (c *Client) checkFunds(ctx context.Context, address string, stakers int) er
 		Denom:   "ubbn",
 	}
 
-	res, err := c.Bank.Balance(ctx, req)
+	res, err := c.bank.Balance(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
