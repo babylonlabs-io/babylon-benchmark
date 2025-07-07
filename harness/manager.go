@@ -79,7 +79,7 @@ func StartManager(ctx context.Context, outputsInWallet uint32, epochInterval uin
 		return nil, err
 	}
 
-	cfg := defaultConfig()
+	cfg := DefaultConfig()
 
 	btcHandler := NewBitcoindHandler(manager)
 	bitcoind, err := btcHandler.Start(ctx)

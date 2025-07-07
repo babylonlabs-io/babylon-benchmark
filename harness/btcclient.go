@@ -1,26 +1,15 @@
 package harness
 
 import (
+	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/config"
-
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
 type BTCClient struct {
 	client *rpcclient.Client
 	config config.BTCConfig
-}
-
-func defaultConfig() *Config {
-	cfg := DefaultConfig()
-	cfg.BTC.NetParams = regtestParams.Name
-	cfg.BTC.Endpoint = "127.0.0.1:18443"
-	cfg.BTC.WalletPassword = "pass"
-	cfg.BTC.Username = "user"
-	cfg.BTC.Password = "pass"
-	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
-
-	return cfg
 }
 
 func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
@@ -30,8 +19,26 @@ func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 	return client, nil
 }
 
+func (c *BTCClient) checkBalance() (balance btcutil.Amount, err error) {
+	err = c.client.WalletPassphrase(c.config.WalletPassword, 60)
+	if err != nil {
+		return 0, fmt.Errorf("error checking balance: %w", err)
+	}
+
+	b, err := c.client.GetBalance("*")
+	if err != nil {
+		return 0, fmt.Errorf("error getting balance: %w", err)
+	}
+
+	if b <= 0 {
+		return 0, fmt.Errorf("balance must be positive")
+	}
+
+	return b, nil
+}
+
 func (c *BTCClient) Setup(cfg config.Config) error {
-	c.ConvertToBTCConfig(cfg)
+	c.config = c.ConvertToBTCConfig(cfg)
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
 		Host:         rpcHostURL(c.config.Endpoint, c.config.WalletName),
 		User:         c.config.Username,
@@ -63,23 +70,21 @@ func (c *BTCClient) Stop() {
 }
 
 func (c *BTCClient) ConvertToBTCConfig(cfg config.Config) config.BTCConfig {
-	btcCfg := config.BTCConfig{}
-
 	if cfg.BTCRPC != "" {
-		btcCfg.Endpoint = cfg.BTCRPC
+		c.config.Endpoint = cfg.BTCRPC
 	}
 	if cfg.WalletName != "" {
-		btcCfg.WalletName = cfg.WalletName
+		c.config.WalletName = cfg.WalletName
 	}
 	if cfg.WalletPassphrase != "" {
-		btcCfg.WalletPassword = cfg.WalletPassphrase
+		c.config.WalletPassword = cfg.WalletPassphrase
 	}
 	if cfg.BTCUser != "" {
-		btcCfg.Username = cfg.BTCUser
+		c.config.Username = cfg.BTCUser
 	}
 	if cfg.BTCPass != "" {
-		btcCfg.Password = cfg.BTCPass
+		c.config.Password = cfg.BTCPass
 	}
 
-	return btcCfg
+	return c.config
 }
