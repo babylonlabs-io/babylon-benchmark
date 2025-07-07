@@ -29,6 +29,14 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
+const (
+	// Minimum required fee per transaction is 425 ubbn,
+	// but each staker performs multiple actions.
+	// 8000 ubbn is allocated per staker to include a safety buffer
+	// for retries, additional messages, and fluctuations.
+	amount = 8000
+)
+
 var (
 	r         = rand.New(rand.NewSource(time.Now().Unix()))
 	RtyAttNum = uint(5)
@@ -237,7 +245,7 @@ func (c *Client) checkFunds(ctx context.Context, address string, stakers int) er
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
 
-	requiredAmount := math.NewInt(int64(8000 * stakers))
+	requiredAmount := math.NewInt(int64(amount * stakers))
 	minimum := sdk.NewCoin("ubbn", requiredAmount)
 
 	if res.Balance.Amount.LT(minimum.Amount) {
