@@ -2,8 +2,11 @@ package harness
 
 import (
 	"context"
+	"cosmossdk.io/math"
 	"encoding/hex"
 	"fmt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"math/rand"
 	"sync"
 	"time"
@@ -23,6 +26,15 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+)
+
+const (
+	// Minimum required fee per transaction is 425 ubbn,
+	// but each staker performs multiple actions.
+	// 8000 ubbn is allocated per staker to include a safety buffer
+	// for retries, additional messages, and fluctuations.
+	amount = 8000
 )
 
 var (
@@ -48,6 +60,7 @@ func getEncodingConfig() *params.EncodingConfig {
 type Client struct {
 	*query.QueryClient
 	provider *babylonclient.CosmosProvider
+	bank     banktypes.QueryClient
 }
 
 func New(
@@ -98,10 +111,16 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	grpcConn, err := grpc.NewClient(cfg.GRPCAddr, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	if err != nil {
+		return nil, err
+	}
+	bankQueryClient := banktypes.NewQueryClient(grpcConn)
 
 	return &Client{
 		queryClient,
 		cp,
+		bankQueryClient,
 	}, nil
 }
 
@@ -195,10 +214,10 @@ func senders(stakers []*BTCStaker) []*SenderWithBabylonClient {
 	return sends
 }
 
-func (c *Client) importKeys(path string) error {
+func (c *Client) importKeys(path string) (*KeyExport, error) {
 	keys, err := LoadKeys(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_ = c.provider.Keybase.Delete(keys.BabylonKey.KeyName)
@@ -209,7 +228,28 @@ func (c *Client) importKeys(path string) error {
 		"secp256k1",
 	)
 	if err != nil {
-		return fmt.Errorf("error importing private key %w", err)
+		return nil, fmt.Errorf("error importing private key %w", err)
+	}
+
+	return keys, nil
+}
+
+func (c *Client) checkFunds(ctx context.Context, address string, stakers int) error {
+	req := &banktypes.QueryBalanceRequest{
+		Address: address,
+		Denom:   "ubbn",
+	}
+
+	res, err := c.bank.Balance(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to query balance: %w", err)
+	}
+
+	requiredAmount := math.NewInt(int64(amount * stakers))
+	minimum := sdk.NewCoin("ubbn", requiredAmount)
+
+	if res.Balance.Amount.LT(minimum.Amount) {
+		return fmt.Errorf("insufficient balance for %s: have %s, need %s", address, res.Balance.String(), minimum.String())
 	}
 
 	return nil

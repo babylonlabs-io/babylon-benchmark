@@ -42,7 +42,12 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error creating babylon client: %w", err)
 	}
 
-	err = bbnClient.importKeys(cfg.KeysPath)
+	keys, err := bbnClient.importKeys(cfg.KeysPath)
+	if err != nil {
+		return fmt.Errorf("error importing keys: %w", err)
+	}
+
+	err = bbnClient.checkFunds(cmdCtx, keys.BabylonKey.Address, cfg.TotalStakers)
 	if err != nil {
 		return fmt.Errorf("error importing keys: %w", err)
 	}
