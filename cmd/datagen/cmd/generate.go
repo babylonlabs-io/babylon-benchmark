@@ -179,6 +179,7 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 
 	cfg := config.Config{
 		BabylonRPC:       babylonRPCaddr,
+		BTCRPC:           btcRPCaddr,
 		BabylonGRPC:      babylonGRPCaddr,
 		BTCPass:          btcpass,
 		BTCUser:          btcuser,
