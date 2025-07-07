@@ -51,7 +51,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error starting btc client: %w", err)
 	}
 
-	_, err = btcClient.checkBalance()
+	err = btcClient.checkBalance()
 	if err != nil {
 		return fmt.Errorf("error checking balance: %w", err)
 	}
