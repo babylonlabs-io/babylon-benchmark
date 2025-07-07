@@ -3,7 +3,6 @@ package harness
 import (
 	"fmt"
 	"github.com/babylonlabs-io/babylon-benchmark/config"
-	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
@@ -31,22 +30,22 @@ func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 	return client, nil
 }
 
-func (c *BTCClient) checkBalance() (balance btcutil.Amount, err error) {
-	err = c.client.WalletPassphrase(c.config.WalletPassword, 60)
+func (c *BTCClient) checkBalance() error {
+	err := c.client.WalletPassphrase(c.config.WalletPassword, 60)
 	if err != nil {
-		return 0, fmt.Errorf("error checking balance: %w", err)
+		return fmt.Errorf("error checking balance: %w", err)
 	}
 
 	b, err := c.client.GetBalance("*")
 	if err != nil {
-		return 0, fmt.Errorf("error getting balance: %w", err)
+		return fmt.Errorf("error getting balance: %w", err)
 	}
 
 	if b <= 0 {
-		return 0, fmt.Errorf("balance must be positive")
+		return fmt.Errorf("balance must be positive")
 	}
 
-	return b, nil
+	return nil
 }
 
 func (c *BTCClient) Setup(cfg config.Config) error {
