@@ -12,6 +12,18 @@ type BTCClient struct {
 	config config.BTCConfig
 }
 
+func defaultConfig() *Config {
+	cfg := DefaultConfig()
+	cfg.BTC.NetParams = regtestParams.Name
+	cfg.BTC.Endpoint = "127.0.0.1:18443"
+	cfg.BTC.WalletPassword = "pass"
+	cfg.BTC.Username = "user"
+	cfg.BTC.Password = "pass"
+	cfg.BTC.ZmqSeqEndpoint = config.DefaultZmqSeqEndpoint
+
+	return cfg
+}
+
 func NewBTCClient(cfg config.BTCConfig) (*BTCClient, error) {
 	client := &BTCClient{
 		config: cfg,

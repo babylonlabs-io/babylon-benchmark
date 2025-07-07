@@ -27,7 +27,7 @@ func RunRemote(ctx context.Context, cfg config.Config) error {
 }
 
 func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
-	btcClient, err := NewBTCClient(config.BTCConfig{})
+	btcClient, err := NewBTCClient(defaultConfig().BTC)
 	if err != nil {
 		return fmt.Errorf("error creating btc client: %w", err)
 	}
