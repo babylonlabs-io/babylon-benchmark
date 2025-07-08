@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"math/rand"
+	"slices"
 	"sync"
 	"time"
 
@@ -220,16 +221,25 @@ func (c *Client) importKeys(path string) (*KeyExport, error) {
 		return nil, err
 	}
 
+	if c.provider.PCfg.KeyringBackend == "" {
+		c.provider.PCfg.KeyringBackend = "test"
+	}
+	if c.provider.PCfg.KeyDirectory == "" {
+		c.provider.PCfg.KeyDirectory = "keys/chain-test"
+	}
+
 	_ = c.provider.Keybase.Delete(keys.BabylonKey.KeyName)
 
 	err = c.provider.Keybase.ImportPrivKeyHex(
 		keys.BabylonKey.KeyName,
-		hex.EncodeToString([]byte(keys.BabylonKey.PrivKey)),
+		keys.BabylonKey.PrivKey,
 		"secp256k1",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error importing private key %w", err)
+		return nil, fmt.Errorf("error importing private key: %w", err)
 	}
+
+	c.provider.PCfg.Key = keys.BabylonKey.KeyName
 
 	return keys, nil
 }
@@ -250,6 +260,49 @@ func (c *Client) checkFunds(ctx context.Context, address string, stakers int) er
 
 	if res.Balance.Amount.LT(minimum.Amount) {
 		return fmt.Errorf("insufficient balance for %s: have %s, need %s", address, res.Balance.String(), minimum.String())
+	}
+
+	return nil
+}
+
+func (c *Client) initialFund(ctx context.Context, senders []*BTCStaker) error {
+	msgs := make([]sdk.Msg, 0, len(senders))
+	amount := sdk.Coin{
+		Denom:  "ubbn",
+		Amount: math.NewInt(8000)}
+	fundedAmount := sdk.NewCoins(amount)
+
+	addrRecord, err := c.provider.Keybase.Key(c.provider.PCfg.Key)
+	if err != nil {
+		return fmt.Errorf("could not retrieve key: %w", err)
+	}
+
+	sdkAddr, err := addrRecord.GetAddress()
+	if err != nil {
+		return fmt.Errorf("could not get address: %w", err)
+	}
+
+	for _, sender := range senders {
+		msg := banktypes.NewMsgSend(
+			sdkAddr,
+			sender.client.BabylonAddress,
+			fundedAmount,
+		)
+		msgs = append(msgs, msg)
+		fmt.Println("Sending msgs: ", msg)
+	}
+
+	if ctx.Err() != nil {
+		return fmt.Errorf("context error: %w", ctx.Err())
+	}
+
+	for msgsChunk := range slices.Chunk(msgs, 50) {
+		relayerMsgs := ToProviderMsgs(msgsChunk)
+		err := c.provider.SendMessagesToMempool(ctx, relayerMsgs, "sam", ctx, []func(*babylonclient.RelayerTxResponse, error){})
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

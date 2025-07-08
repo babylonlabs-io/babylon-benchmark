@@ -47,6 +47,7 @@ func GenerateAndSaveKeys(keyName string) (*KeyExport, error) {
 		PubKey:  hex.EncodeToString(pubKey.Bytes()),
 		PrivKey: hex.EncodeToString(privKey.Bytes()),
 		Address: address.String(),
+		KeyName: keyName,
 	}
 
 	btcKey := Key{

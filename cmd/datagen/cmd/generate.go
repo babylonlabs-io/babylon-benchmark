@@ -17,15 +17,12 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
-	keyName              = "key-name"
-	BabylonAddress       = "babylon-address"
-	grpcaddr             = "grpc-address"
+	keyNameFlag          = "key-name"
 	babylonGRPCaddr      = "babylon-grpc-address"
 	babylonRPCaddr       = "babylon-rpc-address"
 	btcRPCaddr           = "btc-rpc-address"
 	btcpass              = "btc-pass"
 	btcuser              = "btc-user"
-	keys                 = "keys"
 	walletName           = "wallet-name"
 	walletPassphrase     = "wallet-passphrase"
 	keysPath             = "keys-path"
@@ -66,8 +63,8 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.String(keyName, "", "Name of the key to generate")
-	if err := cmd.MarkFlagRequired(keyName); err != nil {
+	f.String(keyNameFlag, "", "Name of the key to generate")
+	if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
 		panic(err)
 	}
 
@@ -262,7 +259,7 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 
 func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
-	keyName, err := flags.GetString(keyName)
+	keyName, err := flags.GetString(keyNameFlag)
 
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)

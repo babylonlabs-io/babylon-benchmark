@@ -46,6 +46,8 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("error importing keys: %w", err)
 	}
+	bbncfg.Key = keys.BabylonKey.KeyName
+	bbncfg.SubmitterAddress = keys.BabylonKey.KeyName
 
 	err = bbnClient.checkFunds(cmdCtx, keys.BabylonKey.Address, cfg.TotalStakers)
 	if err != nil {
@@ -80,6 +82,11 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 
 		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
 		stakers = append(stakers, staker)
+	}
+
+	err = bbnClient.initialFund(cmdCtx, stakers)
+	if err != nil {
+		return fmt.Errorf("failed to initial fund: %w", err)
 	}
 
 	if err := startStakersInBatches(cmdCtx, stakers); err != nil {
