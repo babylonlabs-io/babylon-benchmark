@@ -19,6 +19,7 @@ type Config struct {
 	KeysPath               string
 	WalletName             string
 	WalletPassphrase       string
+	ChainID                string
 }
 
 func (c *Config) Validate() error {
@@ -64,6 +65,10 @@ func (c *Config) ValidateRemote() error {
 
 	if c.KeysPath == "" {
 		return fmt.Errorf("keys path should not be empty")
+	}
+
+	if c.ChainID == "" {
+		return fmt.Errorf("chain id should not be empty")
 	}
 
 	return nil

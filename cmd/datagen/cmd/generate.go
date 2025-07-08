@@ -17,18 +17,16 @@ const (
 	iavlDisabledFastnode = "iavl-disabled-fastnode"
 	iavlCacheSize        = "iavl-cache-size"
 	numMatureOutputsFlag = "num-mature-outputs"
-	keyName              = "key-name"
-	BabylonAddress       = "babylon-address"
-	grpcaddr             = "grpc-address"
+	keyNameFlag          = "key-name"
 	babylonGRPCaddr      = "babylon-grpc-address"
 	babylonRPCaddr       = "babylon-rpc-address"
 	btcRPCaddr           = "btc-rpc-address"
 	btcpass              = "btc-pass"
 	btcuser              = "btc-user"
-	keys                 = "keys"
 	walletName           = "wallet-name"
 	walletPassphrase     = "wallet-passphrase"
 	keysPath             = "keys-path"
+	chainIDFlag          = "chain-id"
 )
 
 // CommandGenerate generates data
@@ -66,8 +64,8 @@ func CommandGenerateAndSaveKey() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.String(keyName, "", "Name of the key to generate")
-	if err := cmd.MarkFlagRequired(keyName); err != nil {
+	f.String(keyNameFlag, "", "Name of the key to generate")
+	if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
 		panic(err)
 	}
 
@@ -127,6 +125,11 @@ func CommandGenerateRemote() *cobra.Command {
 
 	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
 
+	f.String(chainIDFlag, "", "Chain ID")
+	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+		panic(err)
+	}
+
 	return cmd
 }
 
@@ -177,6 +180,11 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", totalStakersFlag)
 	}
 
+	chainId, err := flags.GetString(chainIDFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", chainIDFlag)
+	}
+
 	cfg := config.Config{
 		BabylonRPC:       babylonRPCaddr,
 		BTCRPC:           btcRPCaddr,
@@ -187,6 +195,7 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		WalletName:       walletName,
 		WalletPassphrase: walletPassphrase,
 		TotalStakers:     totalStakers,
+		ChainID:          chainId,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {
@@ -262,7 +271,7 @@ func cmdGenerate(cmd *cobra.Command, _ []string) error {
 
 func cmdGenerateAndSaveKeys(cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
-	keyName, err := flags.GetString(keyName)
+	keyName, err := flags.GetString(keyNameFlag)
 
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", keyName, err)

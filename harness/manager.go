@@ -359,7 +359,7 @@ func (tm *TestManager) fundAllParties(
 		return fmt.Errorf("context error: %w", ctx.Err())
 	}
 
-	for msgsChunk := range slices.Chunk(msgs, 50) {
+	for msgsChunk := range slices.Chunk(msgs, 100) {
 		resp, err := tm.BabylonClientNode0.ReliablySendMsgs(
 			ctx,
 			msgsChunk,
