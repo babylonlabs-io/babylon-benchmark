@@ -35,7 +35,7 @@ const (
 	// but each staker performs multiple actions.
 	// 8000 ubbn is allocated per staker to include a safety buffer
 	// for retries, additional messages, and fluctuations.
-	amount = 8000
+	StakerFundAmount = 8000
 )
 
 var (
@@ -262,17 +262,17 @@ func (c *Client) initialFund(ctx context.Context, senders []*BTCStaker) error {
 	msgs := make([]sdk.Msg, 0, len(senders))
 	amount := sdk.Coin{
 		Denom:  "ubbn",
-		Amount: math.NewInt(8000)}
+		Amount: math.NewInt(StakerFundAmount)}
 	fundedAmount := sdk.NewCoins(amount)
 
-	addrRecord, err := c.provider.Keybase.Key(c.provider.PCfg.Key)
+	addr, err := c.provider.Address()
 	if err != nil {
-		return fmt.Errorf("could not retrieve key: %w", err)
+		return fmt.Errorf("failed to get address: %w", err)
 	}
 
-	sdkAddr, err := addrRecord.GetAddress()
+	sdkAddr, err := sdk.AccAddressFromBech32(addr)
 	if err != nil {
-		return fmt.Errorf("could not get address: %w", err)
+		return fmt.Errorf("failed to get sdk address: %w", err)
 	}
 
 	for _, sender := range senders {
