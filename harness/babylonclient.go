@@ -248,7 +248,7 @@ func (c *Client) checkFunds(ctx context.Context, address string, stakers int) er
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
 
-	requiredAmount := math.NewInt(int64(amount * stakers))
+	requiredAmount := math.NewInt(int64(StakerFundAmount * stakers))
 	minimum := sdk.NewCoin("ubbn", requiredAmount)
 
 	if res.Balance.Amount.LT(minimum.Amount) {
