@@ -35,6 +35,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	bbncfg := bncfg.DefaultBabylonConfig()
 	bbncfg.RPCAddr = cfg.BabylonRPC
 	bbncfg.GRPCAddr = cfg.BabylonGRPC
+	bbncfg.ChainID = cfg.ChainID
 	fmt.Printf("📡 Connecting to Babylon at RPC: %s, GRPC: %s\n", cfg.BabylonRPC, cfg.BabylonGRPC)
 
 	bbnClient, err := New(&bbncfg)

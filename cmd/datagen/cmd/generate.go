@@ -26,6 +26,7 @@ const (
 	walletName           = "wallet-name"
 	walletPassphrase     = "wallet-passphrase"
 	keysPath             = "keys-path"
+	chainIDFlag          = "chain-id"
 )
 
 // CommandGenerate generates data
@@ -124,6 +125,11 @@ func CommandGenerateRemote() *cobra.Command {
 
 	f.Int(totalStakersFlag, 100, "Number of stakers to run (optional)")
 
+	f.String(chainIDFlag, "", "Chain ID")
+	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+		panic(err)
+	}
+
 	return cmd
 }
 
@@ -174,6 +180,11 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", totalStakersFlag)
 	}
 
+	chainId, err := flags.GetString(chainIDFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", chainIDFlag)
+	}
+
 	cfg := config.Config{
 		BabylonRPC:       babylonRPCaddr,
 		BTCRPC:           btcRPCaddr,
@@ -184,6 +195,7 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		WalletName:       walletName,
 		WalletPassphrase: walletPassphrase,
 		TotalStakers:     totalStakers,
+		ChainID:          chainId,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {

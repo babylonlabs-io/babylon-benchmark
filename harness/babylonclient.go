@@ -221,13 +221,6 @@ func (c *Client) importKeys(path string) (*KeyExport, error) {
 		return nil, err
 	}
 
-	if c.provider.PCfg.KeyringBackend == "" {
-		c.provider.PCfg.KeyringBackend = "test"
-	}
-	if c.provider.PCfg.KeyDirectory == "" {
-		c.provider.PCfg.KeyDirectory = "keys/chain-test"
-	}
-
 	_ = c.provider.Keybase.Delete(keys.BabylonKey.KeyName)
 
 	err = c.provider.Keybase.ImportPrivKeyHex(
@@ -289,7 +282,6 @@ func (c *Client) initialFund(ctx context.Context, senders []*BTCStaker) error {
 			fundedAmount,
 		)
 		msgs = append(msgs, msg)
-		fmt.Println("Sending msgs: ", msg)
 	}
 
 	if ctx.Err() != nil {
