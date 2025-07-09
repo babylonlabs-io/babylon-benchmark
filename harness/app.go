@@ -166,6 +166,11 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		return err
 	}
 
+	paramsResp, err := cpSender.BTCCheckpointParams()
+	if err != nil {
+		return fmt.Errorf("failed to get staking params: %w", err)
+	}
+
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
 		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon1.RPCAddr, tm.Config.Babylon1.GRPCAddr)
@@ -174,7 +179,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		rndFpChunk := fpMgr.getRandomChunk(3)
-		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, nil, tm.fundingRequests, tm.fundingResponse))
+		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, &paramsResp.Params, tm.fundingRequests, tm.fundingResponse))
 	}
 
 	// periodically check if we need to fund the staker
