@@ -35,6 +35,7 @@ type BTCStaker struct {
 	client          *SenderWithBabylonClient
 	fpPK            *btcec.PublicKey
 	fpPKChunk       []*btcec.PublicKey
+	btcCkpParams    *btckpttypes.Params
 	fundingRequest  chan sdk.AccAddress
 	fundingResponse chan sdk.AccAddress
 }
@@ -43,6 +44,7 @@ func NewBTCStaker(
 	btcClient *rpcclient.Client,
 	client *SenderWithBabylonClient,
 	finalityProvidersPublicKey []*btcec.PublicKey,
+	btcCkpParams *btckpttypes.Params,
 	fundingRequest chan sdk.AccAddress,
 	fundingResponse chan sdk.AccAddress,
 ) *BTCStaker {
@@ -50,6 +52,7 @@ func NewBTCStaker(
 		btcClient:       btcClient,
 		client:          client,
 		fpPKChunk:       finalityProvidersPublicKey,
+		btcCkpParams:    btcCkpParams,
 		fundingRequest:  fundingRequest,
 		fundingResponse: fundingResponse,
 	}
@@ -429,7 +432,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 	}
 
 	// TODO: hardcoded two in tests
-	inclusionProof := s.waitForTransactionConfirmation(ctx, hash, 2)
+	inclusionProof := s.waitForTransactionConfirmation(ctx, hash, s.btcCkpParams.BtcConfirmationDepth)
 
 	if inclusionProof == nil {
 		// we are quiting

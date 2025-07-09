@@ -306,7 +306,8 @@ func AtomicFundSignSendStakingTx(rpcClient *rpcclient.Client, stakingOutput *wir
 	feeRate := float64(0.00002)
 	pos := 1
 
-	err := rpcClient.WalletPassphrase("pass", 60)
+	//Add password in here for remote/dynamically
+	err := rpcClient.WalletPassphrase("pass", 50)
 	if err != nil {
 		return nil, nil, err
 	}
