@@ -51,11 +51,14 @@ func (c *BTCClient) checkBalance() error {
 func (c *BTCClient) Setup(cfg config.Config) error {
 	c.config = c.ConvertToBTCConfig(cfg)
 	rpcClient, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:         rpcHostURL(c.config.Endpoint, c.config.WalletName),
-		User:         c.config.Username,
-		Pass:         c.config.Password,
-		DisableTLS:   true,
-		HTTPPostMode: true,
+		Host:                 rpcHostURL(c.config.Endpoint, c.config.WalletName),
+		Endpoint:             c.config.Endpoint,
+		User:                 c.config.Username,
+		Pass:                 c.config.Password,
+		DisableTLS:           true,
+		DisableConnectOnNew:  true,
+		DisableAutoReconnect: false,
+		HTTPPostMode:         true,
 	}, nil)
 	if err != nil {
 		return err

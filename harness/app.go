@@ -74,6 +74,11 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 		return fmt.Errorf("error collecting the finality providers %w", err)
 	}
 
+	paramsResp, err := bbnClient.BTCCheckpointParams()
+	if err != nil {
+		return fmt.Errorf("failed to get staking params: %w", err)
+	}
+
 	var stakers []*BTCStaker
 	for i := 0; i < cfg.TotalStakers; i++ {
 		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.BabylonGRPC)
@@ -81,7 +86,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 			return fmt.Errorf("failed to create staker sender: %w", err)
 		}
 
-		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, nil, nil)
+		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, &paramsResp.Params, nil, nil)
 		stakers = append(stakers, staker)
 	}
 
@@ -93,6 +98,8 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	if err := startStakersInBatches(cmdCtx, stakers); err != nil {
 		return fmt.Errorf("failed to start stakers: %w", err)
 	}
+
+	<-cmdCtx.Done()
 
 	return nil
 }
@@ -167,7 +174,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 		}
 
 		rndFpChunk := fpMgr.getRandomChunk(3)
-		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, tm.fundingRequests, tm.fundingResponse))
+		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, nil, tm.fundingRequests, tm.fundingResponse))
 	}
 
 	// periodically check if we need to fund the staker
