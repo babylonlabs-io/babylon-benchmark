@@ -20,6 +20,9 @@ func TestCreatesDelegations(t *testing.T) {
 		TotalFinalityProviders: 3,
 		TotalDelegations:       50,
 		BabylonPath:            "",
+		ChainID:                "chain-test",
+		KeyringBackend:         "test",
+		UnbondingFeeSat:        100_010,
 	}
 
 	done := make(chan error, 1)

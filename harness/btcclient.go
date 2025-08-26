@@ -84,6 +84,7 @@ func (c *BTCClient) Stop() {
 }
 
 func (c *BTCClient) ConvertToBTCConfig(cfg config.Config) config.BTCConfig {
+	originalNetParams := c.config.NetParams
 	if cfg.BTCRPC != "" {
 		c.config.Endpoint = cfg.BTCRPC
 	}
@@ -100,5 +101,6 @@ func (c *BTCClient) ConvertToBTCConfig(cfg config.Config) config.BTCConfig {
 		c.config.Password = cfg.BTCPass
 	}
 
+	c.config.NetParams = originalNetParams
 	return c.config
 }

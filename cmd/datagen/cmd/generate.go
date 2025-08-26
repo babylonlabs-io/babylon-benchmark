@@ -27,6 +27,7 @@ const (
 	walletPassphrase     = "wallet-passphrase"
 	keysPath             = "keys-path"
 	chainIDFlag          = "chain-id"
+	keyringBackendFlag   = "keyring-backend"
 )
 
 // CommandGenerate generates data
@@ -130,6 +131,8 @@ func CommandGenerateRemote() *cobra.Command {
 		panic(err)
 	}
 
+	f.String(keyringBackendFlag, "test", "Keyring backend")
+
 	return cmd
 }
 
@@ -185,6 +188,11 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag: %s", chainIDFlag)
 	}
 
+	keyringBackend, err := flags.GetString(keyringBackendFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag: %s", keyringBackendFlag)
+	}
+
 	cfg := config.Config{
 		BabylonRPC:       babylonRPCaddr,
 		BTCRPC:           btcRPCaddr,
@@ -196,6 +204,8 @@ func cmdGenerateRemote(cmd *cobra.Command, _ []string) error {
 		WalletPassphrase: walletPassphrase,
 		TotalStakers:     totalStakers,
 		ChainID:          chainId,
+		KeyringBackend:   keyringBackend,
+		UnbondingFeeSat:  100_010,
 	}
 
 	if err := cfg.ValidateRemote(); err != nil {

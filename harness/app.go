@@ -27,7 +27,8 @@ func RunRemote(ctx context.Context, cfg config.Config) error {
 }
 
 func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
-	btcClient, err := NewBTCClient(defaultConfig().BTC)
+	btcConfig := defaultConfig().BTC
+	btcClient, err := NewBTCClient(btcConfig)
 	if err != nil {
 		return fmt.Errorf("error creating btc client: %w", err)
 	}
@@ -36,6 +37,7 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	bbncfg.RPCAddr = cfg.BabylonRPC
 	bbncfg.GRPCAddr = cfg.BabylonGRPC
 	bbncfg.ChainID = cfg.ChainID
+	bbncfg.GasAdjustment = 3.0
 	fmt.Printf("📡 Connecting to Babylon at RPC: %s, GRPC: %s\n", cfg.BabylonRPC, cfg.BabylonGRPC)
 
 	bbnClient, err := New(&bbncfg)
@@ -98,6 +100,8 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 	if err := startStakersInBatches(cmdCtx, stakers); err != nil {
 		return fmt.Errorf("failed to start stakers: %w", err)
 	}
+
+	fmt.Printf("⏳ Waiting for BTC transaction confirmations on signet network...\n")
 
 	<-cmdCtx.Done()
 

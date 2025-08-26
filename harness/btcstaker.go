@@ -24,6 +24,7 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/psbt"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
@@ -99,9 +100,13 @@ func (s *BTCStaker) runForever(ctx context.Context, stakerAddress btcutil.Addres
 				continue
 			}
 
+			paramsResp.Params.MinStakingValueSat = 300_000
+			paramsResp.Params.UnbondingFeeSat = 1000
+
 			// each round rnd FP to delegate
 			s.fpPK = s.randomFpPK()
 
+			fmt.Printf("🚀 Starting staking transaction for %s\n", s.client.BabylonAddress.String())
 			if err = s.buildAndSendStakingTransaction(ctx, stakerAddress, stakerPk, &paramsResp.Params); err != nil {
 				fmt.Printf("🚫 Err in BTC Staker (%s), err: %v\n", s.client.BabylonAddress.String(), err)
 				if strings.Contains(err.Error(), "insufficient funds") {
@@ -361,6 +366,7 @@ func (s *BTCStaker) waitForTransactionConfirmation(
 				fmt.Printf("🚫 Err building proof %v\n", err)
 			}
 			if proof != nil {
+				fmt.Printf("✅ Transaction confirmed!\n")
 				return proof
 			}
 		case <-ctx.Done():
@@ -377,6 +383,7 @@ func (s *BTCStaker) buildInclusion(
 	if err != nil {
 		return nil, err
 	}
+
 	// add + 1 to be sure babylon light client is updated to correct height
 	if tx.Confirmations > int64(requiredDepth)+1 {
 		blockHash, err := chainhash.NewHashFromStr(tx.BlockHash)
@@ -424,12 +431,13 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		params.CovenantQuorum,
 		uint16(params.MaxStakingTimeBlocks),
 		btcutil.Amount(params.MinStakingValueSat),
-		regtestParams,
+		s.getNetworkParams(),
 	)
 	if err != nil {
 		return fmt.Errorf("err BuildStakingInfo: %w", err)
 	}
 
+	fmt.Printf("💰 Creating BTC staking transaction for %s at %v\n", s.client.BabylonAddress.String(), time.Now())
 	stakingTx, hash, err := AtomicFundSignSendStakingTx(s.btcClient, stakingInfo.StakingOutput, s.cfg.WalletPassword)
 	if err != nil {
 		return fmt.Errorf("err AtomicFundSignSendStakingTx: %w", err)
@@ -440,8 +448,11 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 
 	if inclusionProof == nil {
 		// we are quiting
+		fmt.Printf("🚫 Empty inclusion proof for %s at %v\n", s.client.BabylonAddress.String(), time.Now())
 		return fmt.Errorf("empty inclusion proof")
 	}
+
+	fmt.Printf("✅ BTC transaction confirmed for %s at %v\n", s.client.BabylonAddress.String(), time.Now())
 
 	unbondingTxValue := params.MinStakingValueSat - params.UnbondingFeeSat
 
@@ -464,7 +475,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		params.CovenantQuorum,
 		unbondingTime,
 		btcutil.Amount(unbondingTxValue),
-		regtestParams,
+		s.getNetworkParams(),
 	)
 
 	if err != nil {
@@ -486,7 +497,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		unbondingTime,
 		params.UnbondingFeeSat,
 		params.SlashingRate,
-		regtestParams,
+		s.getNetworkParams(),
 	)
 	if err != nil {
 		return fmt.Errorf("err BuildSlashingTxFromStakingTxStrict %w", err)
@@ -505,7 +516,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		unbondingTime,
 		params.UnbondingFeeSat,
 		params.SlashingRate,
-		regtestParams,
+		s.getNetworkParams(),
 	)
 	if err != nil {
 		return fmt.Errorf("err BuildSlashingTxFromStakingTxStrict %w", err)
@@ -574,11 +585,13 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		DelegatorUnbondingSlashingSig: unbondingSlashingSig,
 	}
 
+	fmt.Printf("📡 Sending delegation to Babylon for %s at %v\n", s.client.BabylonAddress.String(), time.Now())
 	start := time.Now()
 	if err := s.client.SendMsgs(ctx, []sdk.Msg{msgBTCDel}); err != nil {
 		return fmt.Errorf("err sending MsgCreateBTCDelegation %w", err)
 	}
 	elapsed := time.Since(start)
+	fmt.Printf("🎉 Delegation sent successfully for %s at %v (took %v)\n", s.client.BabylonAddress.String(), time.Now(), elapsed)
 
 	atomic.AddInt32(&delegationsSentCounter, 1)
 	atomic.AddInt64(&totalDelegationExecTime, elapsed.Nanoseconds())
@@ -604,4 +617,17 @@ func (s *BTCStaker) randomFpPK() *btcec.PublicKey {
 	randomIndex := rnd.Intn(len(s.fpPKChunk))
 
 	return s.fpPKChunk[randomIndex]
+}
+
+func (s *BTCStaker) getNetworkParams() *chaincfg.Params {
+	switch s.cfg.NetParams {
+	case "signet":
+		return &chaincfg.SigNetParams
+	case "mainnet":
+		return &chaincfg.MainNetParams
+	case "testnet", "testnet3":
+		return &chaincfg.TestNet3Params
+	default:
+		return &chaincfg.RegressionNetParams // default for regtest
+	}
 }
