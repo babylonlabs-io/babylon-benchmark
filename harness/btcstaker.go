@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/babylonlabs-io/babylon-benchmark/config"
 	"math/rand"
 	"strings"
 	"sync/atomic"
@@ -38,6 +39,7 @@ type BTCStaker struct {
 	btcCkpParams    *btckpttypes.Params
 	fundingRequest  chan sdk.AccAddress
 	fundingResponse chan sdk.AccAddress
+	cfg             config.BTCConfig
 }
 
 func NewBTCStaker(
@@ -47,6 +49,7 @@ func NewBTCStaker(
 	btcCkpParams *btckpttypes.Params,
 	fundingRequest chan sdk.AccAddress,
 	fundingResponse chan sdk.AccAddress,
+	cfg config.BTCConfig,
 ) *BTCStaker {
 	return &BTCStaker{
 		btcClient:       btcClient,
@@ -55,6 +58,7 @@ func NewBTCStaker(
 		btcCkpParams:    btcCkpParams,
 		fundingRequest:  fundingRequest,
 		fundingResponse: fundingResponse,
+		cfg:             cfg,
 	}
 }
 
@@ -278,7 +282,7 @@ func (s *BTCStaker) SignOneInputTaprootSpendingTransaction(
 		return nil, fmt.Errorf("failed to encode PSBT packet: %w", err)
 	}
 
-	if err := s.btcClient.WalletPassphrase("pass", 600); err != nil {
+	if err := s.btcClient.WalletPassphrase(s.cfg.WalletPassword, 60); err != nil {
 		return nil, fmt.Errorf("failed to unlock wallet: %w", err)
 	}
 
@@ -426,7 +430,7 @@ func (s *BTCStaker) buildAndSendStakingTransaction(
 		return fmt.Errorf("err BuildStakingInfo: %w", err)
 	}
 
-	stakingTx, hash, err := AtomicFundSignSendStakingTx(s.btcClient, stakingInfo.StakingOutput)
+	stakingTx, hash, err := AtomicFundSignSendStakingTx(s.btcClient, stakingInfo.StakingOutput, s.cfg.WalletPassword)
 	if err != nil {
 		return fmt.Errorf("err AtomicFundSignSendStakingTx: %w", err)
 	}

@@ -136,12 +136,14 @@ func NewSenderWithBabylonClient(
 	ctx context.Context,
 	keyName string,
 	rpcaddr string,
-	grpcaddr string) (*SenderWithBabylonClient, error) {
+	chainId string,
+	grpcaddr string,
+	keyringBackend string) (*SenderWithBabylonClient, error) {
 
 	cfg := bncfg.DefaultBabylonConfig()
 	cfg.Key = keyName
 	cfg.ChainID = chainId
-	cfg.KeyringBackend = "memory"
+	cfg.KeyringBackend = keyringBackend
 	cfg.RPCAddr = rpcaddr
 	cfg.GRPCAddr = grpcaddr
 	cfg.GasAdjustment = 3.0

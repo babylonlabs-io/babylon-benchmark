@@ -117,11 +117,11 @@ func (s *SubReporter) buildSendReportCheckpoint(ctx context.Context, ckpt *check
 	dataTx2 := wire.NewMsgTx(2)
 	dataTx2.AddTxOut(wire.NewTxOut(0, dataScript2))
 
-	_, hash1, err := AtomicFundSignSendStakingTx(s.tm.TestRpcClient, wire.NewTxOut(0, dataScript1))
+	_, hash1, err := AtomicFundSignSendStakingTx(s.tm.TestRpcClient, wire.NewTxOut(0, dataScript1), s.tm.Config.BTC.WalletPassword)
 	if err != nil {
 		return err
 	}
-	_, hash2, err := AtomicFundSignSendStakingTx(s.tm.TestRpcClient, wire.NewTxOut(0, dataScript2))
+	_, hash2, err := AtomicFundSignSendStakingTx(s.tm.TestRpcClient, wire.NewTxOut(0, dataScript2), s.tm.Config.BTC.WalletPassword)
 	if err != nil {
 		return err
 	}

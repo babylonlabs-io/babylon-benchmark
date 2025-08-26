@@ -81,12 +81,12 @@ func startRemoteHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	var stakers []*BTCStaker
 	for i := 0; i < cfg.TotalStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.BabylonGRPC)
+		stakerSender, err := NewSenderWithBabylonClient(cmdCtx, fmt.Sprintf("staker-%d", i), cfg.BabylonRPC, cfg.ChainID, cfg.BabylonGRPC, cfg.KeyringBackend)
 		if err != nil {
 			return fmt.Errorf("failed to create staker sender: %w", err)
 		}
 
-		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, &paramsResp.Params, nil, nil)
+		staker := NewBTCStaker(btcClient.client, stakerSender, fpPks, &paramsResp.Params, nil, nil, btcClient.config)
 		stakers = append(stakers, staker)
 	}
 
@@ -121,20 +121,20 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 	// bold text
 	fmt.Printf("🟢 Starting with \033[1m%d\033[0m stakers, \u001B[1m%d\u001B[0m finality providers.\n", numStakers, numFinalityProviders)
 
-	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
+	cpSender, err := NewSenderWithBabylonClient(ctx, "node0", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon0.GRPCAddr, "test")
 	if err != nil {
 		return err
 	}
-	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
+	headerSender, err := NewSenderWithBabylonClient(ctx, "headerreporter", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon0.GRPCAddr, "test")
 	if err != nil {
 		return err
 	}
-	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
+	vigilanteSender, err := NewSenderWithBabylonClient(ctx, "vigilante", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon0.GRPCAddr, "test")
 	if err != nil {
 		return err
 	}
 
-	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
+	fpmSender, err := NewSenderWithBabylonClient(ctx, "fpmsender", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon0.GRPCAddr, "test")
 	if err != nil {
 		return err
 	}
@@ -173,13 +173,13 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	var stakers []*BTCStaker
 	for i := 0; i < numStakers; i++ {
-		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon1.RPCAddr, tm.Config.Babylon1.GRPCAddr)
+		stakerSender, err := NewSenderWithBabylonClient(ctx, fmt.Sprintf("staker-%d", i), tm.Config.Babylon1.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon1.GRPCAddr, "test")
 		if err != nil {
 			return err
 		}
 
 		rndFpChunk := fpMgr.getRandomChunk(3)
-		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, &paramsResp.Params, tm.fundingRequests, tm.fundingResponse))
+		stakers = append(stakers, NewBTCStaker(tm.TestRpcClient, stakerSender, rndFpChunk, &paramsResp.Params, tm.fundingRequests, tm.fundingResponse, defaultConfig().BTC))
 	}
 
 	// periodically check if we need to fund the staker
@@ -197,7 +197,7 @@ func startHarness(cmdCtx context.Context, cfg config.Config) error {
 
 	go printStatsForever(ctx, tm, stopChan, cfg)
 
-	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.GRPCAddr)
+	covenantSender, err := NewSenderWithBabylonClient(ctx, "covenant", tm.Config.Babylon0.RPCAddr, tm.Config.Babylon0.ChainID, tm.Config.Babylon0.GRPCAddr, "test")
 	if err != nil {
 		return err
 	}

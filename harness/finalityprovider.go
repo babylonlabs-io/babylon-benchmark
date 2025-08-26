@@ -95,7 +95,7 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 	for i := 0; i < fpm.fpCount; i++ {
 		keyName := lib.GenRandomHexStr(r, 10)
 
-		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon0.RPCAddr, fpm.tm.Config.Babylon0.GRPCAddr)
+		finalitySender, err := NewSenderWithBabylonClient(ctx, keyName, fpm.tm.Config.Babylon0.RPCAddr, fpm.tm.Config.Babylon0.ChainID, fpm.tm.Config.Babylon0.GRPCAddr, "test")
 		if err != nil {
 			return err
 		}

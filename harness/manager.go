@@ -295,7 +295,7 @@ func cleanupDir(path string) {
 	_ = os.RemoveAll(path)
 }
 
-func AtomicFundSignSendStakingTx(rpcClient *rpcclient.Client, stakingOutput *wire.TxOut) (*wire.MsgTx, *chainhash.Hash, error) {
+func AtomicFundSignSendStakingTx(rpcClient *rpcclient.Client, stakingOutput *wire.TxOut, walletPassword string) (*wire.MsgTx, *chainhash.Hash, error) {
 	// 	1 sat/vB
 	// = 1 sat/vB × 1000 vB/kvB
 	// = 1000 sat/kvB × 1/100'000'000 ₿/sat
@@ -307,7 +307,7 @@ func AtomicFundSignSendStakingTx(rpcClient *rpcclient.Client, stakingOutput *wir
 	pos := 1
 
 	//Add password in here for remote/dynamically
-	err := rpcClient.WalletPassphrase("pass", 50)
+	err := rpcClient.WalletPassphrase(walletPassword, 50)
 	if err != nil {
 		return nil, nil, err
 	}
