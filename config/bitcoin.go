@@ -25,6 +25,7 @@ type BTCConfig struct {
 	ZmqTxEndpoint     string                `mapstructure:"zmq-tx-endpoint"`
 	PrivateKey        string
 	Address           string
+	UnbondingFeeSat   int64                 `mapstructure:"unbonding-fee-sat"` // unbonding fee in satoshis
 }
 
 const (
@@ -55,5 +56,6 @@ func DefaultBTCConfig() BTCConfig {
 		ZmqSeqEndpoint:    DefaultZmqSeqEndpoint,
 		ZmqBlockEndpoint:  DefaultZmqBlockEndpoint,
 		ZmqTxEndpoint:     DefaultZmqTxEndpoint,
+		UnbondingFeeSat:   100_010,
 	}
 }

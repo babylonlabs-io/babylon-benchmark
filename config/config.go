@@ -20,6 +20,8 @@ type Config struct {
 	WalletName             string
 	WalletPassphrase       string
 	ChainID                string
+	KeyringBackend         string
+	UnbondingFeeSat        int64
 }
 
 func (c *Config) Validate() error {
