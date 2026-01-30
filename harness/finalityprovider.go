@@ -2,15 +2,19 @@ package harness
 
 import (
 	"context"
-	sdkmath "cosmossdk.io/math"
 	"fmt"
+	"time"
+
+	sdkmath "cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon-benchmark/lib"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
+	"github.com/babylonlabs-io/babylon/v3/app/signingcontext"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -21,7 +25,6 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
-	"time"
 )
 
 type BlockInfo struct {
@@ -118,7 +121,9 @@ func (fpm *FinalityProviderManager) Initialize(ctx context.Context, numPubRand u
 			return err
 		}
 
-		pop, err := datagen.NewPoPBTC(finalitySender.BabylonAddress, fpRecord.PrivKey)
+		// Create finality provider proof of possession signing context
+		fpPopContext := signingcontext.FpPopContextV0(chainId, appparams.AccBTCStaking.String())
+		pop, err := datagen.NewPoPBTC(fpPopContext, finalitySender.BabylonAddress, fpRecord.PrivKey)
 		if err != nil {
 			return err
 		}
